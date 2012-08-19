@@ -1,0 +1,14 @@
+{application, tavern,
+	[
+	  {description,  "TinySolutions API for data store and message distribution"}
+	, {vsn,          "1.0.0"}
+	, {modules,      [tavern]}
+	, {registered,   []}
+	, {applications,
+		[ kernel
+		, stdlib
+		, cowboy
+		]}
+	, {mod,          {tavern, []}}
+	, {env, []}
+]}.
