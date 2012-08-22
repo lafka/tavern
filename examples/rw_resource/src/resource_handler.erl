@@ -1,29 +1,26 @@
 -module(resource_handler).
 
--include("rest.hrl").
-allowed_methods(Req, State) ->
-	{['HEAD', 'GET', 'POST'], Req, State}.
+-behaviour(cowboy_http_handler).
 
-%% Fetch the already processed body
-handle_post(Req, State#{body = Body, grouped = true}) ->
-	ValidGroups      = [meta, payload],
-	case lists:splitwith(fun(A) -> lists:member(A, ValidGroups)) of
-		{_, Z} when length(X) >= 0 ->
-			{422, [{error, [{message, {iolist, [<<"invalid groups: ",
-				lists:map(fun(B) -> [atom_to_binary(B), <<", ">>] end,
-					lists:dropwhile(fun(A) -> lists:member(A, ValidGroups)));
-		{X, Z} when length(X) == 0 and length(z) = length(Z) ->
-			db_handl:store(cowboy_http_req:binding(timestamp, Req), Body),
-			{201, [{}]};
-		{X, _} ->
-			{422, [{error, [{message, {iolist, [<<"missing data for: ",
-				lists:map(fun(B) -> [atom_to_binary(B), <<", ">>] end,
-					lists:dropwhile(fun(A) -> lists:member(A, ValidGroups)))
-	end,
+-export([methods/1, consumes/1, provides/1, handle_put/2, handle_get/2]).
 
-	case Invalid of
+-include_lib("tavern/include/rest_module.hrl").
 
-	Meta = lists:keyfind(meta, 1, Body) of {meta, Params} -> P; _ -> erlang:error(incomplete_resource, {missing, [meta]})
-	lists:keyfind(email, 1, [{meta, P} || {meta, P} <- ])
-	lists:foreach( fun(I) -> case lists:keyfind(email, 1, I))
+methods(_Req) ->
+	['GET', 'PUT'].
 
+consumes(_Req) ->
+	[ {<<"application">>, <<"xml">>, []}
+	, {<<"octet">>, <<"stream">>, []}].
+
+provides(_Req) ->
+	[ {<<"application">>, <<"xml">>, []}
+	, {<<"octet">>, <<"stream">>, []}].
+
+handle_get(Req, State) ->
+	{ID, Req} = cowboy_http_req:binding(id, Req),
+	{'Ok', Req, State, [{result, [{message, <<"fetch: ", ID/binary>>}]}]}.
+
+handle_put(Req, #tavern{body = _Body} = State) ->
+	{ID, Req} = cowboy_http_req:binding(id, Req),
+	{'Created', Req, State, [{result, [{message, <<"created: ", ID/binary>>}]}]}.
