@@ -15,5 +15,5 @@ methods(_Req) ->
 	['HEAD', 'GET', 'POST', 'PUT', 'PATCH'].
 
 handle_404(Req, State) ->
-	{'Not Found', Req, State, [{error, [{message, <<"resource not found">>}, {code, 404]}.
+	{'Not Found', Req, State, [{error, [{message, <<"resource not found">>}, {code, 404}]}]}.
 
