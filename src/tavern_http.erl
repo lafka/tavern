@@ -31,16 +31,17 @@ init(_Transport, Req, [Handler]) ->
 			, {<<"application">>, <<"xml">>,  []}
 			, {<<"application">>, <<"json">>, []}
 		]} ],
+	SetRecord = fun(methods,  V, R) -> R#tavern{methods  = V};
+	               (handlers, V, R) -> R#tavern{handlers = V};
+	               (provides, V, R) -> R#tavern{provides = V};
+	               (consumes, V, R) -> R#tavern{consumes = V} end,
 	Fun = fun({X, Y}, Acc) ->
-		SetRecord = fun(methods,  V) -> Acc#tavern{methods  = V};
-		               (handlers, V) -> Acc#tavern{handlers = V};
-		               (provides, V) -> Acc#tavern{provides = V};
-		               (consumes, V) -> Acc#tavern{consumes = V} end,
-		case erlang:function_exported(Handler, X, 0) of
+		case erlang:function_exported(Handler, X, 1) of
 			true  ->
 				A = Handler:X(Req),
-				{{X, A}, SetRecord(X, A)};
-			false -> {{X, Y}, SetRecord(X, Y)}
+				{{X, A}, SetRecord(X, A, Acc)};
+			false ->
+				{{X, Y}, SetRecord(X, Y, Acc)}
 		end
 	end,
 	{_, State} = lists:mapfoldl( Fun, #tavern{}, Defaults),
