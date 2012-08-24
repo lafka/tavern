@@ -8,7 +8,7 @@
 -export([exposed_method/2, client_acceptable/2, authorized/2, consumed_type/2]).
 
 %% HTTP Request validation cycle
--export([call/3, call/4]).
+-export([call/3]).
 
 -compile([export_all]).
 
@@ -95,7 +95,7 @@ consumed_type(Req, State) ->
 					, Req
 					, State};
 				_ ->
-					call(true, Req,
+					call(Req,
 						  State#tavern{
 							  content_type = <<Mime1, $/, Mime2>>
 							, charset      = Charset}
@@ -124,9 +124,6 @@ decode_body(Req, #tavern{content_type = ContentType} = State) ->
 	{true, Req, State#tavern{body = Payload}, success}.
 
 call(Req, State, Fun) when is_function(Fun) ->
-	call(Req, State, Fun, success).
-
-call(Req, State, Fun, Next) when is_function(Fun) ->
 	case Fun(Req, State) of
 		{true, Req2, State2, success} ->
 			{true, Req2, State2};
