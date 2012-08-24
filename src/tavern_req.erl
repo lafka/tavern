@@ -87,7 +87,6 @@ consumed_type(Req, State) ->
 		{true, Req}  ->
 			#tavern{consumes = TypeList} = State,
 			{Mime1, Mime2, Charset} = content_type(Req),
-			error_logger:info_msg("eats: ~p - ~p~n", [{Mime1, Mime2, Charset}, TypeList]),
 			case match_media_type({Mime1, Mime2, Charset}, TypeList) of
 				[] ->
 					{ {'Not Acceptable', [
@@ -120,23 +119,21 @@ consumed_type(Req, State) ->
 %%	{true, Req, State}.
 
 decode_body(Req, #tavern{content_type = ContentType} = State) ->
-	error_logger:info_msg("decode_body: ~p~n", [ContentType]),
 	{ok, Binary} = cowboy_http_req:body(1500, Req),
 	Payload = tavern_marshal:decode(ContentType, Binary),
 	{true, Req, State#tavern{body = Payload}, success}.
 
 call(Req, State, Fun) when is_function(Fun) ->
-	case Fun(Req, State) of
-		{true, Req2, State2, success} -> {true, Req2, State2};
-		{true, Req2, State2, Next}    -> call(Req2, State2, Next);
-		{{_, _} = Result, Req2, State2} -> {Result, Req2, State2}
-	end.
+	call(Req, State, Fun, success).
 
 call(Req, State, Fun, Next) when is_function(Fun) ->
-	case Fun(Req, State, Next) of
-		{true, Req2, State2, success} -> {true, Req2, State2};
-		{true, Req2, State2, Next2} -> call(Req2, State2, Next, Next2);
-		{{_, _} = Result, Req2, State2} -> {Result, Req2, State2}
+	case Fun(Req, State) of
+		{true, Req2, State2, success} ->
+			{true, Req2, State2};
+		{true, Req2, State2, Next}    ->
+			call(Req2, State2, Next);
+		{{_, _} = Result, Req2, State2} ->
+			{Result, Req2, State2}
 	end.
 
 %% Private API

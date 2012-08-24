@@ -50,15 +50,12 @@ init(_Transport, Req, [Handler]) ->
 handle(Module, Req, #tavern{} = State) ->
 	try
 		case tavern_req:call(Req, State, fun tavern_req:client_acceptable/2) of
-			%% Request is valid, pass it back to module for completion
 			{true, Req2, State2} ->
-				{Status, Payload, Req3, State3} = handle_call(Module, Req2, State2),
-				error_logger:info_msg("resp: call: ~p ~p~n", [Status, Payload]),
-				handle_resp(Req3, State3, Status, Payload);
-			%% tavern_req specifies return status
-			{{Status, Payload}, Req2, State2} ->
-				error_logger:info_msg("resp: direct: ~p ~p~n", [Status, Payload]),
-				handle_resp(Req2, State2, Status, Payload)
+				{Status, NewReq, NewState, Payload} = handle_call(Module, Req2, State2),
+				handle_resp(NewReq, NewState, Status, Payload);
+			%% tavern_req specified return status
+			{{Status, Payload}, NewReq, NewState} ->
+				handle_resp(NewReq, NewState, Status, Payload)
 		end
 	catch
 		Class:Reason ->
@@ -80,8 +77,6 @@ terminate(_Handler, _Req, _State) ->
 handle_call(Module, Req, #tavern{handlers = Handlers} = State) ->
 	{Method, Req}     = cowboy_http_req:method(Req),
 	{Method, Handler} = lists:keyfind(Method, 1, Handlers),
-	error_logger:info_msg("handler_list: ~p~nmethod: ~p~nhandler: ~p~n",
-		[Handlers, Method, Handler]),
 	case erlang:function_exported(Module, Handler, 2) of
 		true  -> Module:Handler(Req, State);
 		false -> erlang:error({no_export, Module, Handler})
@@ -96,7 +91,6 @@ handle_resp(Req, State, Status, Payload) when is_atom(Status) ->
 handle_resp(Req, #tavern{accept = Accept} = State, Status, Payload) ->
 	try
 		{ok, EncodedPayload} = tavern_marshal:encode(Accept, Payload),
-		error_logger:info_msg("abc: ~p~n", [EncodedPayload]),
 		A = cowboy_http_req:reply(Status, [], EncodedPayload, Req),
 		{ok, Resp} = A,
 		{ok, Resp, State}
@@ -109,7 +103,7 @@ handle_resp(Req, #tavern{accept = Accept} = State, Status, Payload) ->
 				"** stacktrace:~n~p~n",
 				[Module, Class, Reason, erlang:get_stacktrace()]),
 			{ok, Resp2} = cowboy_http_req:reply(status('Internal Server Error'),
-				[], <<"(error #1001:) could write response">>,
+				[], <<"(error #1001:) could not write response">>,
 				Req),
 			{ok, Resp2, State}
 	end.
