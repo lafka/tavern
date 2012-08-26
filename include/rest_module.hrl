@@ -16,5 +16,5 @@ handle_default_options(Req, #tavern{methods = Methods} = State) ->
 		(X, Acc) -> X2 = atom_to_binary(X, utf8),
 		<<Acc/binary, $,, X2/binary>> end,
 	{ok, Req2} = cowboy_http_req:set_resp_header('Allow', lists:foldl(F, <<>>, Methods), Req),
-	{'Ok', Req2, State, <<>>}.
+	{'No Content', Req2, State, <<>>}.
 
