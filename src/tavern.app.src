@@ -8,6 +8,7 @@
 		[ kernel
 		, stdlib
 		, cowboy
+		, mochiweb
 		]}
 	, {mod,          {tavern, []}}
 	, {env, []}
