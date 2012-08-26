@@ -10,6 +10,9 @@ decode(Mime, Payload) ->
 	{ok, DecodedPayload} = Module:decode(Payload).
 
 -spec encode(MimeType :: binary() | atom(), Payload :: tree()) -> Encoded :: iolist().
+encode(_, Payload) when Payload == []; Payload == <<>>; Payload == {} ->
+	{ok, <<>>};
+
 encode(Mime, Payload) ->
 	Module = map_mime(Mime),
 	{ok, EncodedPayload} = Module:encode(Payload).
