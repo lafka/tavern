@@ -2,6 +2,10 @@
 
 -export([decode/1, encode/1]).
 
+-compile([export_all]).
+
+-include_lib("eunit/include/eunit.hrl").
+
 decode(Payload) ->
 	case erlsom:simple_form(Payload) of
 		{ok, {_, _, NodeList}, _} ->
@@ -16,13 +20,53 @@ decode(Payload) ->
 	end.
 
 encode(Payload) ->
-	Enc = fun(_, {K, V}) when is_atom(V)    -> {K, [atom_to_list(V)]};
-	         (_, {K, V}) when is_binary(V)  -> {K, [binary_to_list(V)]};
-	         (_, {K, V}) when is_integer(V) -> {K, [integer_to_list(V)]};
-	         (F, [{K, V}]) -> [F(F, {K, V})];
-	         (F, {K, V}) -> {K, F(F, V)} end,
-
-	case (catch xmerl:export_simple(Enc(Enc, Payload), xmerl_xml)) of
+		case (catch xmerl:export_simple(encode_list(Payload), xmerl_xml)) of
 		{'EXIT', _} -> {error, 'xml serialization failed'};
 		Data -> {ok, Data}
 	end.
+
+encode_list(List) ->
+	encode_list(List, []).
+
+encode_list([], Acc) ->
+	lists:reverse(Acc);
+
+encode_list([{Key, Payload} | Tail], Acc) ->
+	encode_list(Tail, [{Key, [{A, encode_value(B)} || {A, B} <- Payload]} | Acc]).
+
+-spec encode_value(binary() | atom() | integer() | any()) -> list().
+encode_value(V) when is_binary(V)               -> [binary_to_list(V)];
+encode_value(V) when is_atom(V)                 -> [atom_to_list(V)];
+encode_value(V) when is_float(V); is_integer(V) -> [mochinum:digits(V)];
+encode_value([{_, _} | _ ] = V)                 -> encode_list(V);
+encode_value(V)                                 -> [V].
+
+
+-ifdef(TEST).
+	-record(testrec, {abc, def}).
+
+	encode_single_level_test() ->
+		{ok, _} = encode([{level1, [{level2, "value"}]}]),
+		{ok, _} = encode([{level1, [{level2, "value"}, {level2, "value2"}]}]).
+
+	encode_datatypes_test() ->
+		{ok, _} = encode([{level1, [{level2, atomvalue}]}]),
+		{ok, _} = encode([{level1, [{level2, <<"binaryval">>}]}]),
+		{ok, _} = encode([{level1, [{level2, 1.23}]}]),
+		{ok, _} = encode([{level1, [{level2, 1000000}]}]),
+		{ok, _} = encode([{level1, [{level2, "stringvalue"}]}]).
+
+	encode_record_test() ->
+		{error, _} = encode([{record, #testrec{abc=123, def=abc}}]).
+
+	encode_multilevel_test() ->
+		{ok, _} = encode([{level1, [{level2, [{level3, [{level4, <<"value">>}]}]}]}]).
+
+	encode_common_elem_test() ->
+		{ok, _} = encode([{level1, [
+			  {level2a, <<"value A">>}
+			, {level2b, <<"value B">>}
+			, {level2c, <<"value C">>}
+			, {level2d, <<"value D">>}
+		]}]).
+-endif.
