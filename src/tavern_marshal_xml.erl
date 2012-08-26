@@ -2,10 +2,10 @@
 
 -export([decode/1, encode/1]).
 
--compile([export_all]).
-
+-include("types.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+-spec decode(binary()) -> {ok, Data :: tree()} | {error, Error :: atom()}.
 decode(Payload) ->
 	case erlsom:simple_form(Payload) of
 		{ok, {_, _, NodeList}, _} ->
@@ -19,15 +19,18 @@ decode(Payload) ->
 		_ -> {error, 'xml unserialization failed'}
 	end.
 
+-spec encode(tree()) -> {ok, Data :: binary()} | {error, Error :: atom()}.
 encode(Payload) ->
 		case (catch xmerl:export_simple(encode_list(Payload), xmerl_xml)) of
 		{'EXIT', _} -> {error, 'xml serialization failed'};
 		Data -> {ok, Data}
 	end.
 
+-spec encode_list(Struct :: [{atom(), any()}]) -> list().
 encode_list(List) ->
 	encode_list(List, []).
 
+-spec encode_list(Struct :: [{atom(), any()}], Acc :: list()) -> list().
 encode_list([], Acc) ->
 	lists:reverse(Acc);
 
