@@ -1,12 +1,4 @@
--type key()            :: atom().
--type value()          :: binary() | tree().
--type tree()           :: [{key(), value()}].
--type tree(Root)       :: [{Root, [{key(), value()}]}].
--type timestamp()      :: non_neg_integer().
--type mime()           :: {binary(), binary(), []}.
--type request_method() :: atom().
--type mime_charset()   :: {binary(), binary(), binary()}.
--type mime_options()   :: {binary(), binary(), [{binary(), binary()}]}.
+-include("types.hrl").
 
 -record(tavern, {
 	module              :: module(),
