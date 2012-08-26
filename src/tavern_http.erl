@@ -1,11 +1,26 @@
 -module(tavern_http).
 
-%% HTTP parse callbacks
--export([init/3, handle/3, terminate/3, status/1]).
-
 -include("rest.hrl").
 -include_lib("cowboy/include/http.hrl").
 
+%% HTTP parse callbacks
+-export([init/3, handle/3, terminate/3, status/1]).
+
+-type key()             :: atom().
+-type value()           :: binary() | number() | string() | tree().
+-type tree()            :: [{key(), value()}].
+-type request_method()  :: atom().
+-type mime()            :: {binary(), binary()}.
+-type mime_options()    :: {binary(), binary(), [{binary(), binary()}]}.
+-type mime_charset()    :: {binary(), binary(), binary()}.
+-type returnstatus()    :: http_int_status() | atom().
+-type http_int_status() :: 100..599.
+
+
+-export_type([mime/0, tree/0, mime_charset/0, request_method/0, returnstatus/0,
+	mime_options/0]).
+
+-spec init(Transport :: module(), Req :: #http_req{}, [module()]) -> {ok, #http_req{}, #tavern{}}.
 init(_Transport, Req, [Handler]) ->
 	Defaults = [
 		  {methods,  ['HEAD', 'GET', 'OPTIONS']}
@@ -17,9 +32,6 @@ init(_Transport, Req, [Handler]) ->
 			, {'DELETE',  handle_delete}
 			, {'PATCH',   handle_patch}
 			, {'OPTIONS', handle_default_options}
-			, {unauthorized, fun handle_unauthorized/2}
-			, {forbidden,    fun handle_forbidden/2}
-			, {error,        fun handle_error/2}
 		]}
 		, {provides, [
 			  {<<"text">>,       <<"html">>, []}
@@ -47,6 +59,7 @@ init(_Transport, Req, [Handler]) ->
 	{_, State} = lists:mapfoldl( Fun, #tavern{}, Defaults),
 	{ok, Req, State#tavern{module = Handler}}.
 
+-spec handle(Handler :: module(), #http_req{}, #tavern{})-> {ok, #http_req{}, #tavern{}}.
 handle(Module, Req, #tavern{} = State) ->
 	try
 		case tavern_req:validate_req(Req, State) of
@@ -71,11 +84,16 @@ handle(Module, Req, #tavern{} = State) ->
 			{ok, Resp2, State}
 	end.
 
+-spec terminate(Handler :: module(), #http_req{}, #tavern{})-> ok.
 terminate(_Handler, _Req, _State) ->
 	ok.
 
+-spec handle_call(Handler :: module(), #http_req{}, #tavern{})-> {returnstatus(), #http_req{}, #tavern{}, tree()}.
 handle_call(_, Req, #tavern{handlers = []} = State) ->
-	handle_error(Req, State, <<"(error: #1002) no request handler found">>);
+	{'Internal Server Error', Req, State, [{error, [
+		  {code,    1002}
+		, {message, <<"(error #1002) no request handler found">>}
+	]}]};
 
 handle_call(Module, Req, #tavern{handlers = Handlers} = State) ->
 	try
@@ -93,11 +111,18 @@ handle_call(Module, Req, #tavern{handlers = Handlers} = State) ->
 				"** State: ~p~n"
 				"** Stacktrace: ~p~n~n",
 				[Module, Class, Reason,  Req, State, erlang:get_stacktrace()]),
-		handle_error(Req, State)
+		{'Internal Server Error', Req, State, [{error, [
+			  {code,    1000}
+			, {message, <<"(error #1000) an unexpected error occured">>}
+		]}]}
 	end.
 
-handle_resp(Req, State, _Status, undefined) ->
-	handle_error(Req, State, <<"empty response">>);
+-spec handle_resp(#http_req{}, #tavern{}, Status :: returnstatus(), Result :: tree())-> {ok, #http_req{}, #tavern{}}.
+handle_resp(Req, State, _Status, []) ->
+	handle_resp(Req, State, 'Internal Server Error', [{error, [
+		  {code,    1001}
+		, {message, <<"(error #1001) empty response">>}
+	]}]);
 
 handle_resp(Req, State, Status, Payload) when is_atom(Status) ->
 	handle_resp(Req, State, status(Status), Payload);
@@ -108,22 +133,7 @@ handle_resp(Req, #tavern{accept = Accept} = State, Status, Payload) ->
 	{ok, Resp} = A,
 	{ok, Resp, State}.
 
-handle_unauthorized(Req, State) ->
-	handle_error(Req, State, status('Unauthorized'), <<"authentication required">>).
-
-handle_forbidden(Req, State) ->
-	handle_error(Req, State, status('Forbidden'), <<"unauthorized">>).
-
-handle_error(Req, State) ->
-	handle_error(Req, State, <<"(error #1000) an unexpected error occured">>).
-
-handle_error(Req, State, Payload) ->
-	handle_error(Req, State, status('Internal Server Error'), Payload).
-
-handle_error(Req, State, Status, Payload) ->
-	handle_resp(Req, State, Status, [{error, [{message, Payload}]}]).
-
--spec status(atom()) -> non_neg_integer().
+-spec status(atom()) -> http_int_status().
 status('Continue') ->                        100;
 status('Switching Protocols') ->             101;
 status('Processing') ->                      102;

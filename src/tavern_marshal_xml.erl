@@ -2,10 +2,9 @@
 
 -export([decode/1, encode/1]).
 
--include("types.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
--spec decode(binary()) -> {ok, Data :: tree()} | {error, Error :: atom()}.
+-spec decode(binary()) -> {ok, Data :: tavern_http:tree()} | {error, Error :: atom()}.
 decode(Payload) ->
 	case erlsom:simple_form(Payload) of
 		{ok, {_, _, NodeList}, _} ->
@@ -19,7 +18,7 @@ decode(Payload) ->
 		_ -> {error, 'xml unserialization failed'}
 	end.
 
--spec encode(tree()) -> {ok, Data :: binary()} | {error, Error :: atom()}.
+-spec encode(tavern_http:tree()) -> {ok, Data :: binary()} | {error, Error :: atom()}.
 encode(Payload) ->
 		case (catch xmerl:export_simple(encode_list(Payload), xmerl_xml)) of
 		{'EXIT', _} -> {error, 'xml serialization failed'};
@@ -46,8 +45,6 @@ encode_value(V)                                 -> [V].
 
 
 -ifdef(TEST).
-	-record(testrec, {abc, def}).
-
 	encode_single_level_test() ->
 		{ok, _} = encode([{level1, [{level2, "value"}]}]),
 		{ok, _} = encode([{level1, [{level2, "value"}, {level2, "value2"}]}]).
@@ -58,9 +55,6 @@ encode_value(V)                                 -> [V].
 		{ok, _} = encode([{level1, [{level2, 1.23}]}]),
 		{ok, _} = encode([{level1, [{level2, 1000000}]}]),
 		{ok, _} = encode([{level1, [{level2, "stringvalue"}]}]).
-
-	encode_record_test() ->
-		{error, _} = encode([{record, #testrec{abc=123, def=abc}}]).
 
 	encode_multilevel_test() ->
 		{ok, _} = encode([{level1, [{level2, [{level3, [{level4, <<"value">>}]}]}]}]).

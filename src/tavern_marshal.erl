@@ -1,15 +1,15 @@
 -module(tavern_marshal).
 
--export([decode/2, encode/2, mimetypes/0]).
+-export([decode/2, encode/2]).
 
 -include("rest.hrl").
 
--spec decode(MimeType :: binary() | atom(), Encoded :: iolist()) -> Payload :: tree().
+-spec decode(Mime :: tavern_http:mime() | binary(), Encoded :: iolist()) -> Payload :: {ok, tavern_http:tree()}.
 decode(Mime, Payload) ->
 	Module = map_mime(Mime),
 	{ok, _} = Module:decode(Payload).
 
--spec encode(MimeType :: binary() | atom(), Payload :: tree()) -> Encoded :: iolist().
+-spec encode(Mime :: tavern_http:mime() | binary(), Payload :: tavern_http:tree()) -> {ok, Encoded :: iolist()}.
 encode(_, Payload) when Payload == []; Payload == <<>>; Payload == {} ->
 	{ok, <<>>};
 
@@ -17,18 +17,12 @@ encode(Mime, Payload) ->
 	Module = map_mime(Mime),
 	{ok, _} = Module:encode(Payload).
 
--spec mimetypes() -> [{MimeType :: binary()}].
-mimetypes() ->
-	[<<"text/html">>, <<"application/json">>, <<"application/xml">>, <<"text/plain">>].
-
--spec map_mime(MimeType :: atom() | binary()) -> module().
-map_mime(A) when A == undefined, A == <<>> -> map_mime(<<"text/plain">>);
-map_mime({Mime1, Mime2})          -> map_mime(<<Mime1/binary, $/, Mime2/binary>>);
-map_mime(Mime) when is_atom(Mime) -> map_mime(atom_to_binary(Mime, utf8));
-map_mime(<<"application/xml">>)   -> tavern_marshal_xml;
-map_mime(<<"application/json">>)  -> tavern_marshal_json;
-map_mime(<<"text/html">>)         -> tavern_marshal_html;
-map_mime(<<"text/plain">>)        -> tavern_marshal_plain.
+-spec map_mime(Mime :: binary() | tavern_http:mime()) -> tavern_marshal_xml | tavern_marshal_json | tavern_marshal_html | tavern_marshal_plain.
+map_mime({<<Mime1/binary>>, <<Mime2/binary>>}) -> map_mime(<<Mime1/binary, $/, Mime2/binary>>);
+map_mime(<<"application/xml">>)    -> tavern_marshal_xml;
+map_mime(<<"application/json">>)   -> tavern_marshal_json;
+map_mime(<<"text/html">>)          -> tavern_marshal_html;
+map_mime(<<"text/plain">>)         -> tavern_marshal_plain.
 
 -ifdef(TEST).
 	-include_lib("eunit/include/eunit.hrl").
