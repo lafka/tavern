@@ -7,7 +7,7 @@
 -spec decode(MimeType :: binary() | atom(), Encoded :: iolist()) -> Payload :: tree().
 decode(Mime, Payload) ->
 	Module = map_mime(Mime),
-	{ok, DecodedPayload} = Module:decode(Payload).
+	{ok, _} = Module:decode(Payload).
 
 -spec encode(MimeType :: binary() | atom(), Payload :: tree()) -> Encoded :: iolist().
 encode(_, Payload) when Payload == []; Payload == <<>>; Payload == {} ->
@@ -15,7 +15,7 @@ encode(_, Payload) when Payload == []; Payload == <<>>; Payload == {} ->
 
 encode(Mime, Payload) ->
 	Module = map_mime(Mime),
-	{ok, EncodedPayload} = Module:encode(Payload).
+	{ok, _} = Module:encode(Payload).
 
 -spec mimetypes() -> [{MimeType :: binary()}].
 mimetypes() ->
