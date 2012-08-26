@@ -49,7 +49,7 @@ init(_Transport, Req, [Handler]) ->
 
 handle(Module, Req, #tavern{} = State) ->
 	try
-		case tavern_req:call(Req, State, fun tavern_req:client_acceptable/2) of
+		case tavern_req:validate_req(Req, State) of
 			{true, Req2, State2} ->
 				{Status, NewReq, NewState, Payload} = handle_call(Module, Req2, State2),
 				handle_resp(NewReq, NewState, Status, Payload);
@@ -59,27 +59,41 @@ handle(Module, Req, #tavern{} = State) ->
 		end
 	catch
 		Class:Reason ->
-			#tavern{} = State,
+			#tavern{module = Module} = State,
 			error_logger:error_msg(
 				"** Handler ~p terminating in tavern_http:handle/3~n"
-				"   for the reason ~p:~p~n** "
-				"** Request was ~p~n"
-				"** State: ~p~n"
-				"** Stacktrace: ~p~n~n",
-				[Module, Class, Reason,  Req, State, erlang:get_stacktrace()]),
-				 handle_error(Req, State),
-			handle_error(Req, State)
+				"   for the reason: ~p:~p~n"
+				"** stacktrace:~n~p~n",
+				[Module, Class, Reason, erlang:get_stacktrace()]),
+			{ok, Resp2} = cowboy_http_req:reply(status('Internal Server Error'),
+				[], <<"(error #1000) unexpected error">>,
+				Req),
+			{ok, Resp2, State}
 	end.
 
 terminate(_Handler, _Req, _State) ->
 	ok.
 
+handle_call(_, Req, #tavern{handlers = []} = State) ->
+	handle_error(Req, State, <<"(error: #1002) no request handler found">>);
+
 handle_call(Module, Req, #tavern{handlers = Handlers} = State) ->
-	{Method, Req}     = cowboy_http_req:method(Req),
-	{Method, Handler} = lists:keyfind(Method, 1, Handlers),
-	case erlang:function_exported(Module, Handler, 2) of
-		true  -> Module:Handler(Req, State);
-		false -> erlang:error({no_export, Module, Handler})
+	try
+		{Method, Req}     = cowboy_http_req:method(Req),
+		{Method, Handler} = lists:keyfind(Method, 1, Handlers),
+		case erlang:function_exported(Module, Handler, 2) of
+			true  -> Module:Handler(Req, State);
+			false -> erlang:error({no_export, Module, Handler})
+		end
+	catch Class:Reason ->
+		error_logger:error_msg(
+				"** Handler ~p terminating in tavern_http:handle_call/3~n"
+				"   for the reason ~p:~p~n** "
+				"** Request was ~p~n"
+				"** State: ~p~n"
+				"** Stacktrace: ~p~n~n",
+				[Module, Class, Reason,  Req, State, erlang:get_stacktrace()]),
+		handle_error(Req, State)
 	end.
 
 handle_resp(Req, State, _Status, undefined) ->
@@ -89,24 +103,10 @@ handle_resp(Req, State, Status, Payload) when is_atom(Status) ->
 	handle_resp(Req, State, status(Status), Payload);
 
 handle_resp(Req, #tavern{accept = Accept} = State, Status, Payload) ->
-	try
-		{ok, EncodedPayload} = tavern_marshal:encode(Accept, Payload),
-		A = cowboy_http_req:reply(Status, [], EncodedPayload, Req),
-		{ok, Resp} = A,
-		{ok, Resp, State}
-	catch
-		Class:Reason ->
-			#tavern{module = Module} = State,
-			error_logger:error_msg(
-				"** Handler ~p terminating in tavern_http:handle_resp/4~n"
-				"   for the reason: ~p:~p~n"
-				"** stacktrace:~n~p~n",
-				[Module, Class, Reason, erlang:get_stacktrace()]),
-			{ok, Resp2} = cowboy_http_req:reply(status('Internal Server Error'),
-				[], <<"(error #1001:) could not write response">>,
-				Req),
-			{ok, Resp2, State}
-	end.
+	{ok, EncodedPayload} = tavern_marshal:encode(Accept, Payload),
+	A = cowboy_http_req:reply(Status, [], EncodedPayload, Req),
+	{ok, Resp} = A,
+	{ok, Resp, State}.
 
 handle_unauthorized(Req, State) ->
 	handle_error(Req, State, status('Unauthorized'), <<"authentication required">>).

@@ -8,7 +8,7 @@
 -export([exposed_method/2, client_acceptable/2, authorized/2, consumed_type/2]).
 
 %% HTTP Request validation cycle
--export([call/3]).
+-export([validate_req/2]).
 
 -compile([export_all]).
 
@@ -60,8 +60,8 @@ client_acceptable(Req, #tavern{provides = AcceptTypes} = State) ->
 		[] ->
 			{Val, Req} = cowboy_http_req:header(<<"Accept">>, Req, <<"missing valid \"Accept\" header">>),
 			{ {'Not Acceptable',
-				[{error, [{message, <<"no supported accept types given">>},
-				          {param,   Val}]}]}
+				[{error, [ {message, <<"no supported accept types given">>}
+				         , {param,   Val}]}]}
 			, Req
 			, State#tavern{accept = {<<"text">>, <<"plain">>}}}
 	end.
@@ -122,6 +122,9 @@ decode_body(Req, #tavern{content_type = ContentType} = State) ->
 	{ok, Binary} = cowboy_http_req:body(1500, Req),
 	Payload = tavern_marshal:decode(ContentType, Binary),
 	{true, Req, State#tavern{body = Payload}, success}.
+
+validate_req(Req, State) ->
+	call(Req, State, fun client_acceptable/2).
 
 call(Req, State, Fun) when is_function(Fun) ->
 	case Fun(Req, State) of
