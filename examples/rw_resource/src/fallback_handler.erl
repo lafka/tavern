@@ -8,11 +8,12 @@
 
 handlers(_Req) ->
 	Handler = handle_404,
-	[{'HEAD',   Handler}, {'GET',   Handler},
-	 {'POST',   Handler}, {'PATCH', Handler}].
+	[{'HEAD',   Handler}, {'GET', Handler},
+	 {'POST',   Handler}, {'PUT', Handler},
+	 {'PATCH', Handler},  {'OPTIONS', handle_default_options}].
 
 methods(_Req) ->
-	['HEAD', 'GET', 'POST', 'PUT', 'PATCH'].
+	['HEAD', 'GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'].
 
 handle_404(Req, State) ->
 	{'Not Found', Req, State, [{error, [{message, <<"resource not found">>}, {code, 404}]}]}.

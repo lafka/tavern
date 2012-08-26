@@ -19,7 +19,7 @@ provides(_Req) ->
 
 handle_get(Req, State) ->
 	{ID, Req} = cowboy_http_req:binding(id, Req),
-	{'Ok', Req, State, [{result, [{message, <<"fetch: ", ID/binary>>}]}]}.
+	{'OK', Req, State, [{result, [{message, <<"fetch: ", ID/binary>>}]}]}.
 
 handle_put(Req, #tavern{body = _Body} = State) ->
 	{ID, Req} = cowboy_http_req:binding(id, Req),
