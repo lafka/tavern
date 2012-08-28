@@ -3,19 +3,15 @@
 -export([decode/1, encode/1]).
 
 -include_lib("eunit/include/eunit.hrl").
+-include_lib("xmerl/include/xmerl.hrl").
 
--spec decode(binary()) -> {ok, Data :: tavern_http:tree()} | {error, Error :: atom()}.
+-spec decode(iolist()) -> {ok, Data :: tavern_http:tree()} | {error, Error :: atom()}.
+decode(Payload) when is_binary(Payload) ->
+	decode(binary_to_list(Payload));
 decode(Payload) ->
-	case erlsom:simple_form(Payload) of
-		{ok, {_, _, NodeList}, _} ->
-			F = fun(H, [I | _] = S) ->
-				case I of
-					{_,_,_} -> [{list_to_atom(A), H(H, C)} || {A, _, C} <- S];
-					_       -> list_to_binary(S)
-				end
-			end,
-			F(F, NodeList);
-		_ -> {error, 'xml unserialization failed'}
+	case (catch xmerl_scan:string(Payload)) of
+		{#xmlElement{name = K, content = V}, _} -> {ok, [{K, decode_xmerl(V)}]};
+		 _ -> {error, 'invalid xml payload'}
 	end.
 
 -spec encode(tavern_http:tree()) -> {ok, Data :: binary()} | {error, Error :: atom()}.
@@ -43,6 +39,10 @@ encode_value(V) when is_float(V); is_integer(V) -> [mochinum:digits(V)];
 encode_value([{_, _} | _ ] = V)                 -> encode_list(V);
 encode_value(V)                                 -> [V].
 
+decode_xmerl([#xmlText{value = V, type = text}]) ->
+    list_to_binary(V);
+decode_xmerl(X) when is_list(X) ->
+    [{K, decode_xmerl(V)} || #xmlElement{name = K, content = V} <- X].
 
 -ifdef(TEST).
 	encode_single_level_test() ->
