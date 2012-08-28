@@ -208,4 +208,4 @@ status('Network Authentication Required') -> 511.
 	accept_catch_all_test() ->
 		ok.
 
--endif().
+-endif.

@@ -191,5 +191,5 @@ match_media_type({T1, T2}, List) ->
 			{<<"application">>, <<"xml">>}, AcceptList),
 		[{<<"application">>,<<"xml">>, _}] = match_media_type(
 			{<<$*>>,<<$*>>}, AcceptList),
-		[] = match_media_type({<<"abc">>, <<"123">, []}, AcceptList).
--endif().
+		[] = match_media_type({<<"abc">>, <<"123">>, []}, AcceptList).
+-endif.
