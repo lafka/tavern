@@ -2,20 +2,25 @@
 
 -behaviour(cowboy_http_handler).
 
--export([methods/1, consumes/1, provides/1, handle_put/2, handle_get/2]).
+-export([allowed_methods/2, content_types_accepted/2, content_types_provided/2,
+	handle_put/2, handle_get/2]).
 
 -include_lib("tavern/include/rest_module.hrl").
 
-methods(_Req) ->
-	['GET', 'PUT'].
+allowed_methods(Req, State) ->
+	{['GET', 'PUT'], Req, State}.
 
-consumes(_Req) ->
-	[ {<<"application">>, <<"xml">>, []}
-	, {<<"octet">>, <<"stream">>, []}].
+content_types_accepted(Req, State) ->
+	{ [ {<<"application">>, <<"xml">>, []}
+	  , {<<"octet">>, <<"stream">>, []}]
+	, Req
+	, State}.
 
-provides(_Req) ->
-	[ {<<"application">>, <<"xml">>, []}
-	, {<<"octet">>, <<"stream">>, []}].
+content_types_provided(Req, State) ->
+	{ [ {<<"application">>, <<"xml">>, []}
+	  , {<<"octet">>, <<"stream">>, []}]
+	, Req
+	, State}.
 
 handle_get(Req, State) ->
 	{ID, Req} = cowboy_http_req:binding(id, Req),

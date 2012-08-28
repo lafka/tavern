@@ -23,8 +23,8 @@
 -spec init(Transport :: module(), Req :: #http_req{}, [module()]) -> {ok, #http_req{}, #tavern{}}.
 init(_Transport, Req, [Handler]) ->
 	Defaults = [
-		  {methods,  ['HEAD', 'GET', 'OPTIONS']}
-		, {handlers, [
+		  {allowed_methods,  ['HEAD', 'GET', 'OPTIONS']}
+		, {method_handlers, [
 			  {'HEAD',    handle_head}
 			, {'GET',     handle_get}
 			, {'POST',    handle_post}
@@ -33,31 +33,31 @@ init(_Transport, Req, [Handler]) ->
 			, {'PATCH',   handle_patch}
 			, {'OPTIONS', handle_default_options}
 		]}
-		, {provides, [
+		, {content_types_provided, [
 			  {<<"text">>,       <<"html">>, []}
 			, {<<"application">>,<<"xml">>,  []}
 			, {<<"application">>,<<"json">>, []}
 		]}
-		, {consumes, [
+		, {content_types_accepted, [
 			  {<<"text">>,        <<"html">>, []}
 			, {<<"application">>, <<"xml">>,  []}
 			, {<<"application">>, <<"json">>, []}
 		]} ],
-	SetRecord = fun(methods,  V, R) -> R#tavern{methods  = V};
-	               (handlers, V, R) -> R#tavern{handlers = V};
-	               (provides, V, R) -> R#tavern{provides = V};
-	               (consumes, V, R) -> R#tavern{consumes = V} end,
-	Fun = fun({X, Y}, Acc) ->
-		case erlang:function_exported(Handler, X, 1) of
+	SetRecord = fun(allowed_methods, V, R)        -> R#tavern{allowed_methods  = V};
+	               (method_handlers, V, R)        -> R#tavern{method_handlers  = V};
+	               (content_types_provided, V, R) -> R#tavern{content_types_provided = V};
+	               (content_types_accepted, V, R) -> R#tavern{content_types_accepted = V} end,
+	Fun = fun({X, Y}, {Rq, S}) ->
+		case erlang:function_exported(Handler, X, 2) of
 			true  ->
-				A = Handler:X(Req),
-				{{X, A}, SetRecord(X, A, Acc)};
+				{A, Rq2, S2} = Handler:X(Rq, S),
+				{Rq2, SetRecord(X, A, S2)};
 			false ->
-				{{X, Y}, SetRecord(X, Y, Acc)}
+				{Rq, SetRecord(X, Y, S)}
 		end
 	end,
-	{_, State} = lists:mapfoldl( Fun, #tavern{}, Defaults),
-	{ok, Req, State#tavern{module = Handler}}.
+	{Req2, State} = lists:foldl( Fun, {Req, #tavern{}}, Defaults),
+	{ok, Req2, State#tavern{module = Handler}}.
 
 -spec handle(Handler :: module(), #http_req{}, #tavern{})-> {ok, #http_req{}, #tavern{}}.
 handle(Module, Req, #tavern{} = State) ->
@@ -89,13 +89,13 @@ terminate(_Handler, _Req, _State) ->
 	ok.
 
 -spec handle_call(Handler :: module(), #http_req{}, #tavern{})-> {returnstatus(), #http_req{}, #tavern{}, tree()}.
-handle_call(_, Req, #tavern{handlers = []} = State) ->
+handle_call(_, Req, #tavern{method_handlers = []} = State) ->
 	{'Internal Server Error', Req, State, [{error, [
 		  {code,    1002}
 		, {message, <<"(error #1002) no request handler found">>}
 	]}]};
 
-handle_call(Module, Req, #tavern{handlers = Handlers} = State) ->
+handle_call(Module, Req, #tavern{method_handlers = Handlers} = State) ->
 	try
 		{Method, Req}     = cowboy_http_req:method(Req),
 		{Method, Handler} = lists:keyfind(Method, 1, Handlers),

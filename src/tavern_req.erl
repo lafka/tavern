@@ -61,7 +61,7 @@ authorized(Req, State) ->
 	{true, Req, State, fun client_acceptable/2}.
 
 -spec client_acceptable(Req :: #http_req{}, State:: #tavern{}) -> continue() | resp().
-client_acceptable(Req, #tavern{provides = AcceptTypes} = State) ->
+client_acceptable(Req, #tavern{content_types_provided = AcceptTypes} = State) ->
 	AcceptFilter = fun(A) -> not ([] == match_media_type(A, AcceptTypes)) end,
 	case lists:filter(AcceptFilter, [{A, B} || {A, B, _} <- accepts(Req)]) of
 		[Type | _] ->
@@ -78,10 +78,10 @@ client_acceptable(Req, #tavern{provides = AcceptTypes} = State) ->
 
 
 -spec exposed_method(Req :: #http_req{}, State :: #tavern{}) -> continue() | resp().
-exposed_method(Req, #tavern{methods = []} = State) ->
+exposed_method(Req, #tavern{allowed_methods= []} = State) ->
 	{true, Req, State, fun consumed_type/2};
 
-exposed_method(Req, #tavern{methods = Methods} = State) ->
+exposed_method(Req, #tavern{allowed_methods = Methods} = State) ->
 	{HTTPMethod, Req} = cowboy_http_req:method(Req),
 	case lists:member(HTTPMethod, Methods) of
 		true ->
@@ -99,7 +99,7 @@ exposed_method(Req, #tavern{methods = Methods} = State) ->
 consumed_type(Req, State) ->
 	case cowboy_http_req:has_body(Req) of
 		{true, Req}  ->
-			#tavern{consumes = TypeList} = State,
+			#tavern{content_types_accepted = TypeList} = State,
 			{Mime1, Mime2, _} = content_type(Req),
 			Charset = content_type_charset(Req),
 			case match_media_type({Mime1, Mime2}, TypeList) of

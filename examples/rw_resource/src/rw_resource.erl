@@ -22,7 +22,7 @@ start(_Type, _Args) ->
 		cowboy_tcp_transport, [{port, 8081}],
 		cowboy_http_protocol, [{dispatch, Dispatch}]
 	),
-	error_logger:info_msg("Listening on 0.0.0.0:~B~n", [80801]),
+	error_logger:info_msg("Listening on 0.0.0.0:~B~n", [8081]),
 	rw_resource_sup:start_link().
 
 stop(_State) ->
