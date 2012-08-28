@@ -1,4 +1,4 @@
-# Tavern is a RESTfull toolkit wrapped around cowboy[1]
+# Tavern is a RESTfull toolkit wrapped around cowboy
 
 The main goal is to provide easy handling of different content 
 types through common a common marshalling structure. There is 
@@ -6,10 +6,10 @@ aslo a API that can be hooked onto to control what content-types
 to handle along with which HTTP verbs to expose and authorization
 for those.
 
-Some parts of it looks alot similar to [http://github.com/basho/webmachine]
-and [http://github.com/extend/cowboy]. But differs on 2 points:
- 1) Providing a consistent namingscheme for HTTP verb methods (handle\_{get,post,put,delete}).
- 2) Transparent handling of input data, all data is transformed to a internal data struct.
+Some parts of it looks alot similar to [Webmachine](http://github.com/basho/webmachine)
+and [Cowboy](http://github.com/extend/cowboy). But differs on 2 points:
+ 1. Providing a consistent namingscheme for HTTP verb methods (_handle_\__{get,post,put,delete}_).
+ 1. Transparent handling of input data, all data is transformed to/from a internal data struct.
 
 The former point allows Tavern to focus on marshalling payloads and you to focus
 on your API's logic.
@@ -64,30 +64,28 @@ handle_get(Req, #tavern{} = State) ->
 	{'Ok', Req, State,[{result, [{message, <<"Look im binary!!!">>}]}]}.
 ```
 
-[1] http://github.com/extend/cowboy
-
 # Overrideable methods
 You can override the initial config in the `#tavern{}` record by exposing the
 correct methods:
 
-## allowed_methods/2 -> {[atom()], #http_req{}, #tavern{}}.
+###### allowed_methods/2 -> {[atom()], #http_req{}, #tavern{}}.
 The methods that is accepted, if this returns an empty list it will allow all methods.
 If request method is not allowed a `405 Method Not Allowed` is returned.
 
 Default is to accept `HEAD`, `GET` and `OPTIONS`. 
 
-## method_handlers/2 -> {[{atom(), atom()}], #http_req{}, #tavern{}}.
+###### method_handlers/2 -> {[{atom(), atom()}], #http_req{}, #tavern{}}.
 Mapping of HTTP request methods and the function that should handle the
 request. Default maps to `handle_<method>` except for `OPTIONS` which 
 maps to `handle_default_options`.
 
-## content_types_provided/2 -> {[tavern_http:mime()], #http_req{}, #tavern{}}.
+###### content_types_provided/2 -> {[tavern_http:mime()], #http_req{}, #tavern{}}.
 A list of mime-types that the resource is capable of writing, default is to
 provide `application/json`, `application/xml`, `text/html` and `text/plain`..
 
 All items here __MUST__ have a corresponding type in `tavern_marshal_*`.
 
-## content_types_accepted/2  -> {[tavern_http:mime_charset() | tavern_http:mime()], #http_req{}, #tavern{}}.
+###### content_types_accepted/2  -> {[tavern_http:mime_charset() | tavern_http:mime()], #http_req{}, #tavern{}}.
 Provides with mime-type tuples that can be written to the resource, this is
 matched with the `Content-Type` header for the mime & charset.
 
