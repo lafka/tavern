@@ -26,7 +26,7 @@ map_mime(<<"text/html">>)          -> tavern_marshal_html;
 map_mime(A) when is_binary(A)      -> tavern_marshal_plain.
 
 -ifdef(TEST).
-	-define(TREE, [{root, [{child, <<"value">>}]}]).
+	-define(TREE, [{<<"root">>, [{<<"child">>, <<"value">>}]}]).
 
 	map_empty_mime_test() ->
 		tavern_marshal_plain = map_mime(<<>>).
@@ -46,7 +46,7 @@ map_mime(A) when is_binary(A)      -> tavern_marshal_plain.
 		?assertEqual(?TREE, DecJSON).
 
 	encode_invalid_data_test() ->
-		{error, _} = decode({<<"application">>, <<"json">>}, <<"invalid[data">>),	
+		{error, _} = decode({<<"application">>, <<"json">>}, <<"invalid[data">>),
 		{error, _} = decode({<<"application">>, <<"xml">>},  <<"invalid#>data">>).
-		
+
 -endif.

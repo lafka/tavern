@@ -10,14 +10,14 @@ decode(Payload) when is_binary(Payload) ->
 	decode(binary_to_list(Payload));
 decode(Payload) ->
 	case (catch xmerl_scan:string(Payload)) of
-		{#xmlElement{name = K, content = V}, _} -> {ok, [{K, decode_xmerl(V)}]};
+		{#xmlElement{name = K, content = V}, _} -> {ok, [{atom_to_binary(K, utf8), decode_xmerl(V)}]};
 		 _ -> {error, 'invalid xml payload'}
 	end.
 
 -spec encode(tavern_http:tree()) -> {ok, Data :: binary()} | {error, Error :: atom()}.
 encode(Payload) ->
 		case (catch xmerl:export_simple(encode_list(Payload), xmerl_xml)) of
-		{'EXIT', _} -> {error, 'xml serialization failed'};
+		{'EXIT', A} -> {error, {'xml serialization failed', A}};
 		Data -> {ok, Data}
 	end.
 
@@ -30,19 +30,29 @@ encode_list([], Acc) ->
 	lists:reverse(Acc);
 
 encode_list([{Key, Payload} | Tail], Acc) ->
-	encode_list(Tail, [{Key, [{A, encode_value(B)} || {A, B} <- Payload]} | Acc]).
+	encode_list(Tail, [{encode_key(Key), [{encode_key(A), encode_value(B)} || {A, B} <- Payload]} | Acc]);
+encode_list([Value | Tail], Acc) ->
+	encode_list(Tail, [encode_value(Value) | Acc]).
 
 -spec encode_value(binary() | atom() | integer() | any()) -> list().
-encode_value(V) when is_binary(V)               -> [binary_to_list(V)];
-encode_value(V) when is_atom(V)                 -> [atom_to_list(V)];
-encode_value(V) when is_float(V); is_integer(V) -> [mochinum:digits(V)];
+encode_value(V)   when is_binary(V)               -> [binary_to_list(V)];
+encode_value([V]) when is_binary(V)               -> [binary_to_list(V)];
+encode_value(V)   when is_atom(V)                 -> [atom_to_list(V)];
+encode_value(V)   when is_float(V); is_integer(V) -> [mochinum:digits(V)];
 encode_value([{_, _} | _ ] = V)                 -> encode_list(V);
 encode_value(V)                                 -> [V].
+
+-spec encode_key(Key :: binary() | any()) -> atom().
+encode_key(Key) when is_binary(Key) ->
+	binary_to_atom(Key, utf8);
+encode_key(Key) when is_atom(Key) ->
+	Key;
+encode_key(_) -> exit(invalid_key_type).
 
 decode_xmerl([#xmlText{value = V, type = text}]) ->
     list_to_binary(V);
 decode_xmerl(X) when is_list(X) ->
-    [{K, decode_xmerl(V)} || #xmlElement{name = K, content = V} <- X].
+    [{atom_to_binary(K, utf8), decode_xmerl(V)} || #xmlElement{name = K, content = V} <- X].
 
 -ifdef(TEST).
 	encode_single_level_test() ->
@@ -66,4 +76,10 @@ decode_xmerl(X) when is_list(X) ->
 			, {level2c, <<"value C">>}
 			, {level2d, <<"value D">>}
 		]}]).
+
+	encode_binary_key_test() ->
+		{ok, _} = encode([{<<"level1">>, [{<<"level2">>, "value"}]}]).
+
+	decode_test() ->
+		{ok, _} = decode("<?xml version=\"1.0\"?><root><abc>def</abc></root>").
 -endif.
