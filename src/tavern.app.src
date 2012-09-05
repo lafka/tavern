@@ -1,6 +1,6 @@
 {application, tavern,
 	[
-	  {description,  "TinySolutions API for data store and message distribution"}
+	  {description,  "Somewhat RESTfull extension for cowboy without support of hypermedia"}
 	, {vsn,          "1.0.0"}
 	, {modules,      [tavern]}
 	, {registered,   []}
