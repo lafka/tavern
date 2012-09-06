@@ -1,0 +1,4 @@
+{application,tavern}.
+{packages,[]}.
+{modules,[tavern_http,tavern_marshal,tavern_marshal_html,tavern_marshal_json,
+          tavern_marshal_plain,tavern_marshal_xml,tavern_req]}.
