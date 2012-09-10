@@ -92,6 +92,27 @@ matched with the `Content-Type` header for the mime & charset.
 
 #The tavern application#
 
+##Error codes
+
+<table width="100%" border="0" summary="list of error codes">
+	<tr>
+		<td>1000</td>
+		<td>An unknown error, most likely in the tavern code</td>
+	</tr>
+	<tr>
+		<td>1001</td>
+		<td>An empty response was encountered, this should not happend without a ```Empty Reponse``` header</td>
+	</tr>
+	<tr>
+		<td>1002</td>
+		<td>No request handlers assigned for the given request method</td>
+	</tr>
+	<tr>
+		<td>1003</td>
+		<td>An error occured with the conversion of content to/from the internal format</td>
+	</tr>
+</table>
+
 ##Modules##
 
 <table width="100%" border="0" summary="list of modules">
