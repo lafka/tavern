@@ -57,7 +57,10 @@ init(_Transport, Req, [Handler]) ->
 		end
 	end,
 	{Req2, State} = lists:foldl( Fun, {Req, #tavern{}}, Defaults),
-	{ok, Req2, State#tavern{module = Handler}}.
+	case erlang:function_exported(Handler, init, 2) of
+		true  -> Handler:init(Req, State#tavern{module = Handler});
+		false -> {ok, Req2, State#tavern{module = Handler}}
+	end.
 
 -spec handle(Handler :: module(), #http_req{}, #tavern{})-> {ok, #http_req{}, #tavern{}}.
 handle(Module, Req, #tavern{} = State) ->
