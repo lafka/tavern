@@ -7,29 +7,28 @@
 -spec decode(binary()) -> {ok, Data :: tavern_http:tree()} | {error, Error :: atom()}.
 decode(Payload) ->
 	case (catch mochijson2:decode(Payload)) of
-		{struct, _}   = Res         -> {ok, decode_mochistruct(Res)};
+		{struct, [_]} = Res         -> {ok, [decode_mochistruct(Res)]};
+		{struct, _} = Res           -> {ok, decode_mochistruct(Res)};
 		Struct when is_list(Struct) -> {ok, decode_mochistruct(Struct)};
-		_                           -> {error, {'invalid json payload'}}
+		_                           -> {error, 'invalid json payload'}
 	end.
 
 -spec encode(tavern_http:tree()) -> {ok, Data :: iolist()} | {error, Error :: atom()}.
-encode(Payload) ->
+encode(Payload) -> 
 	case (catch mochijson2:encode(Payload)) of
 		{'EXIT', _} -> {error, 'json serialization failed'};
 		Data -> {ok, Data}
 	end.
-
-%% Optimistic, we don't have a "list" in the JSON sense so we can assume
-%% a list containing a single object is actually a multi level object.
-%% This is to allow XML like <root><child>val</child></root> to be the same
-%% as both {root : {child : "val"}} AND {root : [{child : "val"}]}.
--spec decode_mochistruct({struct, [any()] | [any()]}) -> [any()].
-decode_mochistruct({struct, Struct})        -> decode_mochistruct(Struct);
-decode_mochistruct([{Key, Struct}])         -> decode_mochistruct({Key, Struct});
-decode_mochistruct({Key, Struct})           -> {Key, decode_mochistruct(Struct)};
-decode_mochistruct(List) when is_list(List) -> [decode_mochistruct(A) || A <- List];
-decode_mochistruct(Val)                     -> Val.
-
+%% Optimistic, we don't have a "objects" in the JSON sense, instead we have a notion
+%% similar to DOM node lists, meaning there can be no single object that's not inside
+%% a list.
+-spec decode_mochistruct({struct | binary(), [any()] | any()} | [any()]) -> [any()].
+decode_mochistruct({K, {struct, _} = V})              -> {K, [decode_mochistruct(V)]};
+decode_mochistruct({struct, [V]})                     -> decode_mochistruct(V); 
+decode_mochistruct({struct, V})                       -> decode_mochistruct(V); 
+decode_mochistruct({<<K/binary>>, V})                 -> {K, decode_mochistruct(V)};
+decode_mochistruct(List) when is_list(List)           -> [decode_mochistruct(S) || S <- List];
+decode_mochistruct(V)                                 -> V.
 
 -ifdef(TEST).
 	encode_single_level_test() ->
@@ -55,23 +54,39 @@ decode_mochistruct(Val)                     -> Val.
 		]}]).
 
 	decode_test() ->
-		{ok, {<<"t0">>,  <<"v0">>}}  = decode(
-			<<"[{\"t0\" : \"v0\"}]">>),
-		{ok, {<<"t1">>,{<<"k2">>,  <<"v2">>}}}  = decode(
-			<<"{\"t1\" :  {\"k2\" : \"v2\"}}">>),
-		{ok, {<<"t2">>,[{<<"k2">>, <<"v2">>}, {<<"k3">>, <<"v3">>}]}} = decode(
-			<<"{\"t2\":[{\"k2\":\"v2\"}, {\"k3\" : \"v3\"}]}">>),
-		{ok, {<<"t3">>,{<<"k2">>, <<"v2">>}}} = decode(
-			<<"{\"t3\":[{\"k2\":\"v2\"}]}">>),
-		{ok, {<<"t4">>,[{<<"k2">>, <<"v2">>}, {<<"k3">>, <<"v3">>}]}} = decode(
-			<<"[{\"t4\":[{\"k2\":\"v2\"},{\"k3\":\"v3\"}]}]">>),
-		{ok, [{<<"t5">>,{<<"k1">>, <<"v1">>}}, {<<"t5a">>, <<"v2">>}]} = decode(
-			<<"[{\"t5\":{\"k1\":\"v1\"}}, {\"t5a\":\"v2\"}]">>).
+		?assertEqual({ok, [{<<"t0a">>,  <<"v0">>}]},
+			decode(<<"{\"t0a\" : \"v0\"}">>)),
+		?assertEqual({ok, [{<<"t0b">>,  <<"v0">>}]},
+			decode(<<"[{\"t0b\" : \"v0\"}]">>)),
+		?assertEqual({ok, [{<<"t1">>,[{<<"k2">>,  <<"v2">>}]}]},
+			decode(<<"{\"t1\" :  {\"k2\" : \"v2\"}}">>)),
+		?assertEqual({ok, [{<<"t2">>,[{<<"k2">>, <<"v2">>}, {<<"k3">>, <<"v3">>}]}]},
+			decode(<<"{\"t2\":[{\"k2\":\"v2\"}, {\"k3\" : \"v3\"}]}">>)),
+		?assertEqual({ok, [{<<"t3">>,[{<<"k2">>, <<"v2">>}]}]},
+			decode(<<"{\"t3\":[{\"k2\":\"v2\"}]}">>)),
+		?assertEqual({ok, [{<<"t4">>,[{<<"k2">>, <<"v2">>}, {<<"k3">>, <<"v3">>}]}]},
+			decode(<<"[{\"t4\":[{\"k2\":\"v2\"},{\"k3\":\"v3\"}]}]">>)),
+		?assertEqual({ok, [{<<"t5">>,[{<<"k1">>, <<"v1">>}]}, {<<"t5a">>, <<"v2">>}]},
+			decode(<<"[{\"t5\":{\"k1\":\"v1\"}}, {\"t5a\":\"v2\"}]">>)).
 
-%	encode_decode_test() ->
-%		{ok, JSON} = encode([{level1, [{level2, [{level3, [{level4, <<"value">>}]}]}]}]),
-%		{ok, _}    = decode(JSON).
-%
-%	encode_binary_key_test() ->
-%		{ok, _} = encode([{<<"level1">>, [{<<"level2">>, "value"}]}]).
+	decode_multiprop_object_test() ->
+		?assertEqual({ok, [{<<"m0a">>, <<"v0a">>}, {<<"m0b">>, <<"v0b">>}]},
+			decode(<<"{\"m0a\":\"v0a\", \"m0b\" : \"v0b\"}">>)).
+
+	decode_datatypes_test() ->
+		?assertEqual({ok, [{<<"p0">>, 1.23}]},      decode(<<"{\"p0\":1.23}">>)),
+		?assertEqual({ok, [{<<"p1">>, 4}]},         decode(<<"{\"p1\":4}">>)),
+		?assertEqual({ok, [{<<"p2">>, null}]},      decode(<<"{\"p2\":null}">>)),
+		?assertEqual({ok, [{<<"p3">>, true}]},      decode(<<"{\"p3\":true}">>)),
+		?assertEqual({ok, [{<<"p4">>, false}]},     decode(<<"{\"p4\":false}">>)),
+		{error, _} = decode(<<"{\"p5\":undefined}">>),
+		{error, _} = decode(<<"{\"p6\":ok}">>).
+
+	encode_decode_test() ->
+		ErlTerm = [{<<"level1">>, [{<<"level2">>, [{<<"level3">>, [{<<"level4">>, <<"value">>}]}]}]}],
+		{ok, JSON} = encode(ErlTerm),
+		?assertEqual({ok, ErlTerm}, decode(JSON)).
+
+	encode_atom_key_test() ->
+		{ok, _} = encode([{level1, [{level2, "value"}]}]).
 -endif.

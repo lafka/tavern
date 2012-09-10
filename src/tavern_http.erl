@@ -6,7 +6,7 @@
 %% HTTP parse callbacks
 -export([init/3, handle/3, terminate/3, status/1]).
 
--type key()             :: atom().
+-type key()             :: atom() | binary().
 -type value()           :: binary() | number() | string() | tree().
 -type tree()            :: [{key(), value()}].
 -type request_method()  :: atom().
