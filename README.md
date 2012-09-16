@@ -14,6 +14,8 @@ and [Cowboy](http://github.com/extend/cowboy). But differs on 2 points:
 The former point allows Tavern to focus on marshalling payloads and you to focus
 on your API's logic.
 
+Travis-CI build status: [![Build Status](https://secure.travis-ci.org/lafka/tavern.png)](http://travis-ci.org/lafka/tavern)
+
 # Handler API example
 To start of just create a `cowboy_http_handler` implementation and include
 `tavern/include/rest_module.hrl`. This will provide some request validation,
