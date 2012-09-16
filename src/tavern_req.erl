@@ -1,14 +1,15 @@
 -module(tavern_req).
 
 %% HTTP Request data retrieval API
--export([content_type/1, content_type_charset/1,
-	accepts/1, accepts_charset/1, accepts_language/1]).
+-export([content_type/1, content_type_charset/1, content_language/1,
+	accepts/1, accept_charset/1, accept_language/1]).
 
 %% HTTP Request validation cycle
 -export([validate_req/2]).
 
 -include("rest.hrl").
 -include_lib("cowboy/include/http.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -type resp() :: { { Status  :: tavern_http:returnstatus()
                   , Payload :: tavern_http:tree()}
@@ -32,20 +33,24 @@ accepts(Req) ->
 	end, binary:split(sanitize_media_header(Val), [<<$,>>],[global])),
 	lists:sort(fun({_, _, P1}, {_, _, P2}) -> P1 =< P2 end, AcceptList).
 
--spec accepts_charset(#http_req{}) -> binary().
-accepts_charset(Req) ->
-	{Val, Req} = cowboy_http_req:header(<<"Accept-Charset">>, <<"utf-8">>),
+-spec accept_charset(#http_req{}) -> binary().
+accept_charset(Req) ->
+	{Val, Req} = cowboy_http_req:header('Accept-Charset', Req, <<"utf-8">>),
 	Val.
 
--spec accepts_language(#http_req{}) -> binary().
-accepts_language(Req) ->
-	{Val, Req} = cowboy_http_req:header(<<"Content-Language">>, <<"en-US">>),
+-spec accept_language(#http_req{}) -> binary().
+accept_language(Req) ->
+	{Val, Req} = cowboy_http_req:header('Accept-Language', Req, <<"en-US">>),
+	Val.
+-spec content_language(#http_req{}) -> binary().
+content_language(Req) ->
+	{Val, Req} = cowboy_http_req:header('Content-Language', Req, <<"en-US">>),
 	Val.
 
 -spec content_type(#http_req{}) -> tavern_http:mime_options().
 content_type(Req) ->
-	{'Content-Type', V} = cowboy_http_req:header('Content-Type', Req, <<"text/plain; charset=utf8">>),
-	cowboy_http:content_type(V).
+	{Val, Req} = cowboy_http_req:header('Content-Type', Req),
+	cowboy_http:content_type(Val).
 
 -spec content_type_charset(#http_req{}) -> binary().
 content_type_charset(Req) ->
@@ -104,26 +109,33 @@ consumed_type(Req, State) ->
 			Charset = content_type_charset(Req),
 			case match_media_type({Mime1, Mime2}, TypeList) of
 				[] ->
-					{ {'Not Acceptable'
-					, [ {error, [ {code, 406}
-					            , {'message',      <<"content type not understood">>}
+					{ {'Unsupported Media Type'
+					, [ {error, [ {code, 415}
+					            , {'message',      <<"content type not allowed">>}
 					            , {'param',        <<Mime1/binary, $/, Mime2/binary>>}]}]}
 					, Req
 					, State};
 				_ ->
-					call( Req
-						, State#tavern{ content_type = {Mime1, Mime2}
-						              , charset      = Charset}
-						, fun decode_body/2)
+					{true, Req, State#tavern{ content_type = {Mime1, Mime2}
+						              , charset      = Charset}, fun decode_body/2}
 			end;
 		{false, Req} -> {true, Req, State, success}
 	end.
 
 -spec decode_body(Req :: #http_req{}, State :: #tavern{}) -> continue() | resp().
 decode_body(Req, #tavern{content_type = ContentType} = State) ->
-	{ok, Binary}  = cowboy_http_req:body(1500, Req),
-	{ok, Payload} = tavern_marshal:decode(ContentType, Binary),
-	{true, Req, State#tavern{body = Payload}, success}.
+	{ok, Binary, Req2} = cowboy_http_req:body(1500, Req),
+	case tavern_marshal:decode(ContentType, Binary) of
+		{ok, Payload} ->
+			{true, Req2, State#tavern{body = Payload}, success};
+		{error, Err} ->
+			ErrBin = atom_to_binary(Err, utf8),
+			{ {'Unsupported Media Type'
+			, [ {error, [ {code, 1003}
+			            , {'message',      <<"(error #1003) ", ErrBin/binary>>}]}]}
+			, Req2
+			, State}
+	end.
 
 -spec validate_req(Req :: #http_req{}, State :: #tavern{}) ->
 	{true, #http_req{}, #tavern{}} |
@@ -155,6 +167,8 @@ sanitize_media_header(Header) ->
 match_media_type(Mime, []) ->
 	[Mime];
 
+match_media_type({A, B, _}, L) ->
+	match_media_type({A, B}, L);
 match_media_type({<<$*>>, <<$*>>}, [Item | _]) ->
 	[Item];
 
@@ -177,19 +191,41 @@ match_media_type({T1, T2}, List) ->
 		[A | _] -> [A]
 	end.
 
-
 -ifdef(TEST).
+	accepts_test() ->
+		?assertEqual(
+			[{<<"application">>,<<"xml">>,1.0},{<<"application">>,<<"json">>,1.0}],
+			accepts(#http_req{headers = [{'Accept', <<"application/xml, application/json">>}]})).
+	accept_charset_test() ->
+		?assertEqual(
+			[{<<"application">>,<<"xml">>,1.0},{<<"application">>,<<"json">>,1.0}],
+			accepts(#http_req{headers = [{'Accept', <<"application/xml, application/json">>}]})).
+	accept_language_test() ->
+		?assertEqual(ok, ok).
+	content_language_test() ->
+		?assertEqual(ok, ok).
+	content_type_charset_test() ->
+		?assertEqual(ok, ok).
+	content_type_test() ->
+		?assertEqual(ok, ok).
+	authorized_test() ->
+		?assertEqual(ok, ok).
+	client_acceptable_test() ->
+		?assertEqual(ok, ok).
+	exposed_method_test() ->
+		?assertEqual(ok, ok).
+	consumed_type_test() ->
+		?assertEqual(ok, ok).
+	decode_body_test() ->
+		?assertEqual(ok, ok).
+		
 	match_wildcard_media_type_test() ->
 		AcceptList = [ {<<"text">>,       <<"html">>,[]}
 		             , {<<"application">>,<<"xml">>, []}
 		             , {<<"application">>,<<"json">>,[]}],
-		[{<<"application">>,<<"xml">>}] = match_media_type(
-			{<<$*>>, <<"xml">>, []}, AcceptList),
-		[{<<"application">>,<<"xml">>, _}] = match_media_type(
-			{<<"application">>, <<$*>>}, AcceptList),
-		[{<<"application">>,<<"xml">>, _}] = match_media_type(
-			{<<"application">>, <<"xml">>}, AcceptList),
-		[{<<"application">>,<<"xml">>, _}] = match_media_type(
-			{<<$*>>,<<$*>>}, AcceptList),
-		[] = match_media_type({<<"abc">>, <<"123">>, []}, AcceptList).
+		?assertEqual([{<<"application">>,<<"xml">>,  []}], match_media_type({<<$*>>, <<"xml">>}, AcceptList)),
+		?assertEqual([{<<"application">>,<<"xml">>,  []}], match_media_type({<<"application">>, <<$*>>}, AcceptList)),
+		?assertEqual([{<<"application">>,<<"xml">>,  []}], match_media_type({<<"application">>, <<"xml">>}, AcceptList)),
+		?assertEqual([{<<"text">>,<<"html">>,        []}], match_media_type({<<$*>>,<<$*>>}, AcceptList)),
+		?assertEqual([], match_media_type({<<"abc">>, <<"123">>, []}, AcceptList)).
 -endif.
