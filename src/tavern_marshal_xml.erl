@@ -17,7 +17,7 @@ decode(Payload) ->
 -spec encode(tavern_http:tree()) -> {ok, Data :: binary()} | {error, Error :: atom()}.
 encode(Payload) ->
 		case (catch xmerl:export_simple(encode_list(Payload), xmerl_xml)) of
-		{'EXIT', A} -> {error, {'xml serialization failed', A}};
+		{'EXIT', A} -> {error, 'xml serialization failed'};
 		Data -> {ok, Data}
 	end.
 
