@@ -1,7 +1,6 @@
 -module(tavern_http).
 
 -include("rest.hrl").
--include_lib("cowboy/include/http.hrl").
 
 %% HTTP parse callbacks
 -export([init/3, handle/3, terminate/3, status/1]).
@@ -20,7 +19,7 @@
 -export_type([mime/0, tree/0, mime_charset/0, request_method/0, returnstatus/0,
 	mime_options/0]).
 
--spec init(Transport :: module(), Req :: #http_req{}, [module()]) -> {ok, #http_req{}, #tavern{}}.
+-spec init(Transport :: module(), Req :: cowboy_http:req(), [module()]) -> {ok, cowboy_http:req(), #tavern{}}.
 init(_Transport, Req, [Handler]) ->
 	Defaults = [
 		  {allowed_methods,  ['HEAD', 'GET', 'OPTIONS']}
@@ -62,7 +61,7 @@ init(_Transport, Req, [Handler]) ->
 		false -> {ok, Req2, State#tavern{module = Handler}}
 	end.
 
--spec handle(Handler :: module(), #http_req{}, #tavern{})-> {ok, #http_req{}, #tavern{}}.
+-spec handle(Handler :: module(), cowboy_http:req(), #tavern{})-> {ok, cowboy_http:req(), #tavern{}}.
 handle(Module, Req, #tavern{} = State) ->
 	try
 		case tavern_req:validate_req(Req, State) of
@@ -81,17 +80,17 @@ handle(Module, Req, #tavern{} = State) ->
 				"   for the reason: ~p:~p~n"
 				"** stacktrace:~n~p~n",
 				[Module, Class, Reason, erlang:get_stacktrace()]),
-			{ok, Resp2} = cowboy_http_req:reply(status('Internal Server Error'),
+			{ok, Resp2} = cowboy_req:reply(status('Internal Server Error'),
 				[], <<"(error #1000) unexpected error">>,
 				Req),
 			{ok, Resp2, State}
 	end.
 
--spec terminate(Handler :: module(), #http_req{}, #tavern{})-> ok.
+-spec terminate(Handler :: module(), cowboy_http:req(), #tavern{})-> ok.
 terminate(_Handler, _Req, _State) ->
 	ok.
 
--spec handle_call(Handler :: module(), #http_req{}, #tavern{})-> {returnstatus(), #http_req{}, #tavern{}, tree()}.
+-spec handle_call(Handler :: module(), cowboy_http:req(), #tavern{})-> {returnstatus(), cowboy_http:req(), #tavern{}, tree()}.
 handle_call(_, Req, #tavern{method_handlers = []} = State) ->
 	{'Internal Server Error', Req, State, [{error, [
 		  {code,    1002}
@@ -100,7 +99,7 @@ handle_call(_, Req, #tavern{method_handlers = []} = State) ->
 
 handle_call(Module, Req, #tavern{method_handlers = Handlers} = State) ->
 	try
-		{Method, Req}     = cowboy_http_req:method(Req),
+		{Method, Req}     = cowboy_req:method(Req),
 		{Method, Handler} = lists:keyfind(Method, 1, Handlers),
 		case erlang:function_exported(Module, Handler, 2) of
 			true  -> Module:Handler(Req, State);
@@ -120,7 +119,7 @@ handle_call(Module, Req, #tavern{method_handlers = Handlers} = State) ->
 		]}]}
 	end.
 
--spec handle_resp(#http_req{}, #tavern{}, Status :: returnstatus(), Result :: tree())-> {ok, #http_req{}, #tavern{}}.
+-spec handle_resp(cowboy_http:req(), #tavern{}, Status :: returnstatus(), Result :: tree())-> {ok, cowboy_http:req(), #tavern{}}.
 handle_resp(Req, State, _Status, []) ->
 	handle_resp(Req, State, 'Internal Server Error', [{error, [
 		  {code,    1001}
@@ -132,7 +131,7 @@ handle_resp(Req, State, Status, Payload) when is_atom(Status) ->
 
 handle_resp(Req, #tavern{accept = Accept} = State, Status, Payload) ->
 	{ok, EncodedPayload} = tavern_marshal:encode(Accept, Payload),
-	A = cowboy_http_req:reply(Status, [], EncodedPayload, Req),
+	A = cowboy_req:reply(Status, [], EncodedPayload, Req),
 	{ok, Resp} = A,
 	{ok, Resp, State}.
 

@@ -8,22 +8,21 @@
 -export([validate_req/2]).
 
 -include("rest.hrl").
--include_lib("cowboy/include/http.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -type resp() :: { { Status  :: tavern_http:returnstatus()
                   , Payload :: tavern_http:tree()}
-                , Req   :: #http_req{}
+                , Req   :: cowboy_http:req()
                 , State :: #tavern{}}.
 -type continue() :: { true
-                    , Req        :: #http_req{}
+                    , Req        :: cowboy_http:req()
                     , State      :: #tavern{}
                     , NextAction :: function() | success}.
 
 %% Public request data API
--spec accepts(#http_req{}) -> [{binary(), binary(), float()}].
+-spec accepts(cowboy_http:req()) -> [{binary(), binary(), float()}].
 accepts(Req) ->
-	{Val, Req} = cowboy_http_req:header('Accept', Req, <<"text/plain">>),
+	{Val, Req} = cowboy_req:header('Accept', Req, <<"text/plain">>),
 	AcceptList = lists:map(fun(Seg) ->
 		{T1, T2, P} = cowboy_http:content_type(Seg),
 		case lists:takewhile(fun({<<"q">>, _}) -> true; (_) -> false end, P) of
@@ -33,26 +32,26 @@ accepts(Req) ->
 	end, binary:split(sanitize_media_header(Val), [<<$,>>],[global])),
 	lists:sort(fun({_, _, P1}, {_, _, P2}) -> P1 =< P2 end, AcceptList).
 
--spec accept_charset(#http_req{}) -> binary().
+-spec accept_charset(cowboy_http:req()) -> binary().
 accept_charset(Req) ->
-	{Val, Req} = cowboy_http_req:header('Accept-Charset', Req, <<"utf-8">>),
+	{Val, Req} = cowboy_req:header('Accept-Charset', Req, <<"utf-8">>),
 	Val.
 
--spec accept_language(#http_req{}) -> binary().
+-spec accept_language(cowboy_http:req()) -> binary().
 accept_language(Req) ->
-	{Val, Req} = cowboy_http_req:header('Accept-Language', Req, <<"en-US">>),
+	{Val, Req} = cowboy_req:header('Accept-Language', Req, <<"en-US">>),
 	Val.
--spec content_language(#http_req{}) -> binary().
+-spec content_language(cowboy_http:req()) -> binary().
 content_language(Req) ->
-	{Val, Req} = cowboy_http_req:header('Content-Language', Req, <<"en-US">>),
+	{Val, Req} = cowboy_req:header('Content-Language', Req, <<"en-US">>),
 	Val.
 
--spec content_type(#http_req{}) -> tavern_http:mime_options().
+-spec content_type(cowboy_http:req()) -> tavern_http:mime_options().
 content_type(Req) ->
-	{Val, Req} = cowboy_http_req:header('Content-Type', Req),
+	{Val, Req} = cowboy_req:header('Content-Type', Req),
 	cowboy_http:content_type(Val).
 
--spec content_type_charset(#http_req{}) -> binary().
+-spec content_type_charset(cowboy_http:req()) -> binary().
 content_type_charset(Req) ->
 	{_ContentType, _ContentType2, CParams} = content_type(Req),
 	case [ B || {<<"charset">>, B} <- CParams] of
@@ -61,18 +60,18 @@ content_type_charset(Req) ->
 	end.
 
 %% Private request validation
--spec authorized(Req :: #http_req{}, State :: #tavern{}) -> continue().
+-spec authorized(Req :: cowboy_http:req(), State :: #tavern{}) -> continue().
 authorized(Req, State) ->
 	{true, Req, State, fun client_acceptable/2}.
 
--spec client_acceptable(Req :: #http_req{}, State:: #tavern{}) -> continue() | resp().
+-spec client_acceptable(Req :: cowboy_http:req(), State:: #tavern{}) -> continue() | resp().
 client_acceptable(Req, #tavern{content_types_provided = AcceptTypes} = State) ->
 	AcceptFilter = fun(A) -> not ([] == match_media_type(A, AcceptTypes)) end,
 	case lists:filter(AcceptFilter, [{A, B} || {A, B, _} <- accepts(Req)]) of
 		[Type | _] ->
 			{true, Req, State#tavern{accept = Type}, fun exposed_method/2};
 		[] ->
-			{Val, Req} = cowboy_http_req:header(<<"Accept">>, Req, <<"missing valid \"Accept\" header">>),
+			{Val, Req} = cowboy_req:header(<<"Accept">>, Req, <<"missing valid \"Accept\" header">>),
 			{ {'Not Acceptable'
 			, [{error, [ {code, 405}
 			           , {message, <<"no supported accept types given">>}
@@ -82,12 +81,12 @@ client_acceptable(Req, #tavern{content_types_provided = AcceptTypes} = State) ->
 	end.
 
 
--spec exposed_method(Req :: #http_req{}, State :: #tavern{}) -> continue() | resp().
+-spec exposed_method(Req :: cowboy_http:req(), State :: #tavern{}) -> continue() | resp().
 exposed_method(Req, #tavern{allowed_methods= []} = State) ->
 	{true, Req, State, fun consumed_type/2};
 
 exposed_method(Req, #tavern{allowed_methods = Methods} = State) ->
-	{HTTPMethod, Req} = cowboy_http_req:method(Req),
+	{HTTPMethod, Req} = cowboy_req:method(Req),
 	case lists:member(HTTPMethod, Methods) of
 		true ->
 			{true, Req, State, fun consumed_type/2};
@@ -100,9 +99,9 @@ exposed_method(Req, #tavern{allowed_methods = Methods} = State) ->
 			, State}
 	end.
 
--spec consumed_type(Req :: #http_req{}, State :: #tavern{}) -> continue() | resp().
+-spec consumed_type(Req :: cowboy_http:req(), State :: #tavern{}) -> continue() | resp().
 consumed_type(Req, State) ->
-	case cowboy_http_req:has_body(Req) of
+	case cowboy_req:has_body(Req) of
 		{true, Req}  ->
 			#tavern{content_types_accepted = TypeList} = State,
 			{Mime1, Mime2, _} = content_type(Req),
@@ -122,9 +121,9 @@ consumed_type(Req, State) ->
 		{false, Req} -> {true, Req, State, success}
 	end.
 
--spec decode_body(Req :: #http_req{}, State :: #tavern{}) -> continue() | resp().
+-spec decode_body(Req :: cowboy_http:req(), State :: #tavern{}) -> continue() | resp().
 decode_body(Req, #tavern{content_type = ContentType} = State) ->
-	{ok, Binary, Req2} = cowboy_http_req:body(1500, Req),
+	{ok, Binary, Req2} = cowboy_req:body(1500, Req),
 	case tavern_marshal:decode(ContentType, Binary) of
 		{ok, Payload} ->
 			{true, Req2, State#tavern{body = Payload}, success};
@@ -137,15 +136,15 @@ decode_body(Req, #tavern{content_type = ContentType} = State) ->
 			, State}
 	end.
 
--spec validate_req(Req :: #http_req{}, State :: #tavern{}) ->
-	{true, #http_req{}, #tavern{}} |
-	{{tavern_http:return_status(), tavern_http:tree()}, #http_req{}, #tavern{}}.
+-spec validate_req(Req :: cowboy_http:req(), State :: #tavern{}) ->
+	{true, cowboy_http:req(), #tavern{}} |
+	{{tavern_http:return_status(), tavern_http:tree()}, cowboy_http:req(), #tavern{}}.
 validate_req(Req, State) ->
 	call(Req, State, fun authorized/2).
 
--spec call(Req :: #http_req{}, State :: #tavern{}, Callback :: function()) ->
-	{true, #http_req{}, #tavern{}} |
-	{{tavern_http:return_status(), tavern_http:tree()}, #http_req{}, #tavern{}}.
+-spec call(Req :: cowboy_http:req(), State :: #tavern{}, Callback :: function()) ->
+	{true, cowboy_http:req(), #tavern{}} |
+	{{tavern_http:return_status(), tavern_http:tree()}, cowboy_http:req(), #tavern{}}.
 call(Req, State, Fun) when is_function(Fun) ->
 	case Fun(Req, State) of
 		{true, Req2, State2, success} ->
@@ -192,14 +191,20 @@ match_media_type({T1, T2}, List) ->
 	end.
 
 -ifdef(TEST).
+	-define(HTTP_REQ, cowboy_req:new(undefined, undefined, undefined, 'GET',
+	                       {1, 1}, <<>>, <<>>, undefined, undefined)).
 	accepts_test() ->
+		Req = cowboy_req:add_header('Accept', <<"application/xml, application/json">>, ?HTTP_REQ),
 		?assertEqual(
 			[{<<"application">>,<<"xml">>,1.0},{<<"application">>,<<"json">>,1.0}],
-			accepts(#http_req{headers = [{'Accept', <<"application/xml, application/json">>}]})).
+			accepts(Req)).
+
 	accept_charset_test() ->
+		Req = cowboy_req:add_header('Accept', <<"application/xml, application/json">>, ?HTTP_REQ),
 		?assertEqual(
 			[{<<"application">>,<<"xml">>,1.0},{<<"application">>,<<"json">>,1.0}],
-			accepts(#http_req{headers = [{'Accept', <<"application/xml, application/json">>}]})).
+			accepts(Req)).
+
 	accept_language_test() ->
 		?assertEqual(ok, ok).
 	content_language_test() ->
