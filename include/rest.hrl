@@ -8,7 +8,8 @@
 	accept = {<<$*>>, <<$*>>}   :: tavern_http:mime(),
 	content_type                :: tavern_http:mime(),
 	status = 'Bad Request'      :: atom(),
-	body = []                   :: tavern_http:tree()
+	body = []                   :: tavern_http:tree(),
+	state = undefined           :: any()
 }).
 
 -define(DEFAULT_CHARSET,      <<"utf8">>).
