@@ -14,7 +14,7 @@ decode(Payload) ->
 	end.
 
 -spec encode(tavern_http:tree()) -> {ok, Data :: iolist()} | {error, Error :: atom()}.
-encode(Payload) -> 
+encode(Payload) ->
 	case (catch mochijson2:encode(Payload)) of
 		{'EXIT', _} -> {error, 'json serialization failed'};
 		Data -> {ok, Data}
@@ -23,8 +23,10 @@ encode(Payload) ->
 %% similar to DOM node lists, meaning there can be no single object that's not inside
 %% a list.
 -spec decode_mochistruct({struct | binary(), [any()] | any()} | [any()]) -> [any()].
+decode_mochistruct({K, {struct, V2} = V}) when is_list(V2),length(V2) > 1 ->
+	{K, decode_mochistruct(V)};
 decode_mochistruct({K, {struct, _} = V})              -> {K, [decode_mochistruct(V)]};
-decode_mochistruct({struct, [V]})                     -> decode_mochistruct(V); 
+decode_mochistruct({struct, [V]})                     -> decode_mochistruct(V);
 decode_mochistruct({struct, V})                       -> decode_mochistruct(V); 
 decode_mochistruct({<<K/binary>>, V})                 -> {K, decode_mochistruct(V)};
 decode_mochistruct(List) when is_list(List)           -> [decode_mochistruct(S) || S <- List];
@@ -81,6 +83,10 @@ decode_mochistruct(V)                                 -> V.
 		?assertEqual({ok, [{<<"p4">>, false}]},     decode(<<"{\"p4\":false}">>)),
 		{error, _} = decode(<<"{\"p5\":undefined}">>),
 		{error, _} = decode(<<"{\"p6\":ok}">>).
+
+	decode_nested_obj_test() ->
+		?assertEqual({ok, [{<<"output">>, [{6,false},{7,false}]}]}
+		, decode(<<"{\"output\":{6:false,7:false}}">>)).
 
 	encode_decode_test() ->
 		ErlTerm = [{<<"level1">>, [{<<"level2">>, [{<<"level3">>, [{<<"level4">>, <<"value">>}]}]}]}],
