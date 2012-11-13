@@ -46,13 +46,13 @@ init(_Transport, Req, [Handler]) ->
 	               (method_handlers, V, R)        -> R#tavern{method_handlers  = V};
 	               (content_types_provided, V, R) -> R#tavern{content_types_provided = V};
 	               (content_types_accepted, V, R) -> R#tavern{content_types_accepted = V} end,
-	Fun = fun({X, Y}, {Rq, S}) ->
-		case erlang:function_exported(Handler, X, 2) of
+	Fun = fun({Key, Val}, {Req, State}) ->
+		case erlang:function_exported(Handler, Key, 2) of
 			true  ->
-				{A, Rq2, S2} = Handler:X(Rq, S),
-				{Rq2, SetRecord(X, A, S2)};
+				{Val, Req2, State2} = Handler:Key(Req, State),
+				{Req2, SetRecord(Key, Val, State2)};
 			false ->
-				{Rq, SetRecord(X, Y, S)}
+				{Req, SetRecord(Key, Val, State)}
 		end
 	end,
 	{Req2, State} = lists:foldl( Fun, {Req, #tavern{}}, Defaults),
