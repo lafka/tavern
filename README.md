@@ -31,10 +31,10 @@ payload marshalling and automagically map cowboy callbacks to your methods.
 
 -include_lib("tavern/include/rest_module.hrl").
 
-%% Expose these HTTP methods, default will only expose ['HEAD', 'GET]
+%% Expose these HTTP methods, default will only expose [<<"HEAD">>, <<"GET">>]
 %% The OPTIONS is handled by handle_default_options/2
 allowed_methods(Req, State) ->
-	{['GET', 'PUT', 'OPTIONS'], Req, State}.
+	{[<<"GET">>, <<"PUT">>, <<"OPTIONS">>], Req, State}.
 
 %% The Accept types, default will allow for xml, json, html and text
 content_types_provided(Req, State) ->
@@ -59,7 +59,7 @@ handle_put(Req, #tavern{body = _Body} = State) ->
 handle_get(Req, #tavern{} = State) ->
 	%% The entire cowboy is available if needed
 	{Resource, Req} = cowboy_http_req:binding(resource, Req),
-	
+
 	%% The return data is a tree structure where leafes are string, binary or atom.
 	%% There is no support for handling XML attributes or self-closing elements and
 	%% the structure is more akine to JSON.
@@ -130,5 +130,5 @@ matched with the `Content-Type` header for the mime & charset.
 ##Building Edoc##
 
 By default, `./rebar doc` generates Github-flavored Markdown files.
-If you want to change this, remove the `edoc_opts` line from `rebar.config`.Gproc was first introduced at the ACM SIGPLAN Erlang Workshop in
+If you want to change this, remove the `edoc_opts` line from `rebar.config`.
 
