@@ -191,16 +191,18 @@ match_media_type({T1, T2}, List) ->
 	end.
 
 -ifdef(TEST).
-	-define(HTTP_REQ, cowboy_req:new(undefined, undefined, undefined, <<"GET">>,
-	                       {1, 1}, <<>>, <<>>, undefined, undefined)).
+	-define(HTTP_REQ(Headers), cowboy_req:new(undefined, undefined, <<"GET">>, <<$/>>
+		, <<"">>, <<"">>, {1, 1}, Headers, <<"localhost">>, 8080, <<"">>
+		, true, undefined)).
+
 	accepts_test() ->
-		Req = cowboy_req:add_header(<<"accept">>, <<"application/xml, application/json">>, ?HTTP_REQ),
+		Req = ?HTTP_REQ([{<<"accept">>, <<"application/xml, application/json">>}]),
 		?assertEqual(
 			[{<<"application">>,<<"xml">>,1.0},{<<"application">>,<<"json">>,1.0}],
 			accepts(Req)).
 
 	accept_charset_test() ->
-		Req = cowboy_req:add_header(<<"accept">>, <<"application/xml, application/json">>, ?HTTP_REQ),
+		Req = ?HTTP_REQ([{<<"accept">>, <<"application/xml, application/json">>}]),
 		?assertEqual(
 			[{<<"application">>,<<"xml">>,1.0},{<<"application">>,<<"json">>,1.0}],
 			accepts(Req)).
@@ -223,7 +225,7 @@ match_media_type({T1, T2}, List) ->
 		?assertEqual(ok, ok).
 	decode_body_test() ->
 		?assertEqual(ok, ok).
-		
+
 	match_wildcard_media_type_test() ->
 		AcceptList = [ {<<"text">>,       <<"html">>,[]}
 		             , {<<"application">>,<<"xml">>, []}
