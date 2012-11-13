@@ -22,15 +22,15 @@
 -spec init(Transport :: module(), Req :: cowboy_http:req(), [module()]) -> {ok, cowboy_http:req(), #tavern{}}.
 init(_Transport, Req, [Handler]) ->
 	Defaults = [
-		  {allowed_methods,  ['HEAD', 'GET', 'OPTIONS']}
+		  {allowed_methods,  [<<"HEAD">>, <<"GET">>, <<"OPTIONS">>]}
 		, {method_handlers, [
-			  {'HEAD',    handle_head}
-			, {'GET',     handle_get}
-			, {'POST',    handle_post}
-			, {'PUT',     handle_put}
-			, {'DELETE',  handle_delete}
-			, {'PATCH',   handle_patch}
-			, {'OPTIONS', handle_default_options}
+			  {<<"HEAD">>,    handle_head}
+			, {<<"GET">>,     handle_get}
+			, {<<"POST">>,    handle_post}
+			, {<<"PUT">>,     handle_put}
+			, {<<"DELETE">>,  handle_delete}
+			, {<<"PATCH">>,   handle_patch}
+			, {<<"OPTIONS">>, handle_default_options}
 		]}
 		, {content_types_provided, [
 			  {<<"text">>,       <<"html">>, []}

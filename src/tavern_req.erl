@@ -22,7 +22,7 @@
 %% Public request data API
 -spec accepts(cowboy_http:req()) -> [{binary(), binary(), float()}].
 accepts(Req) ->
-	{Val, Req} = cowboy_req:header('Accept', Req, <<"text/plain">>),
+	{Val, Req} = cowboy_req:header(<<"accept">>, Req, <<"text/plain">>),
 	AcceptList = lists:map(fun(Seg) ->
 		{T1, T2, P} = cowboy_http:content_type(Seg),
 		case lists:takewhile(fun({<<"q">>, _}) -> true; (_) -> false end, P) of
@@ -34,21 +34,21 @@ accepts(Req) ->
 
 -spec accept_charset(cowboy_http:req()) -> binary().
 accept_charset(Req) ->
-	{Val, Req} = cowboy_req:header('Accept-Charset', Req, <<"utf-8">>),
+	{Val, Req} = cowboy_req:header(<<"accept-charset">>, Req, <<"utf-8">>),
 	Val.
 
 -spec accept_language(cowboy_http:req()) -> binary().
 accept_language(Req) ->
-	{Val, Req} = cowboy_req:header('Accept-Language', Req, <<"en-US">>),
+	{Val, Req} = cowboy_req:header(<<"accept-language">>, Req, <<"en-US">>),
 	Val.
 -spec content_language(cowboy_http:req()) -> binary().
 content_language(Req) ->
-	{Val, Req} = cowboy_req:header('Content-Language', Req, <<"en-US">>),
+	{Val, Req} = cowboy_req:header(<<"content-language">>, Req, <<"en-US">>),
 	Val.
 
 -spec content_type(cowboy_http:req()) -> tavern_http:mime_options().
 content_type(Req) ->
-	{Val, Req} = cowboy_req:header('Content-Type', Req),
+	{Val, Req} = cowboy_req:header(<<"content-type">>, Req),
 	cowboy_http:content_type(Val).
 
 -spec content_type_charset(cowboy_http:req()) -> binary().
@@ -71,7 +71,7 @@ client_acceptable(Req, #tavern{content_types_provided = AcceptTypes} = State) ->
 		[Type | _] ->
 			{true, Req, State#tavern{accept = Type}, fun exposed_method/2};
 		[] ->
-			{Val, Req} = cowboy_req:header(<<"Accept">>, Req, <<"missing valid \"Accept\" header">>),
+			{Val, Req} = cowboy_req:header(<<"accept">>, Req, <<"missing valid \"Accept\" header">>),
 			{ {'Not Acceptable'
 			, [{error, [ {code, 405}
 			           , {message, <<"no supported accept types given">>}
@@ -191,16 +191,16 @@ match_media_type({T1, T2}, List) ->
 	end.
 
 -ifdef(TEST).
-	-define(HTTP_REQ, cowboy_req:new(undefined, undefined, undefined, 'GET',
+	-define(HTTP_REQ, cowboy_req:new(undefined, undefined, undefined, <<"GET">>,
 	                       {1, 1}, <<>>, <<>>, undefined, undefined)).
 	accepts_test() ->
-		Req = cowboy_req:add_header('Accept', <<"application/xml, application/json">>, ?HTTP_REQ),
+		Req = cowboy_req:add_header(<<"accept">>, <<"application/xml, application/json">>, ?HTTP_REQ),
 		?assertEqual(
 			[{<<"application">>,<<"xml">>,1.0},{<<"application">>,<<"json">>,1.0}],
 			accepts(Req)).
 
 	accept_charset_test() ->
-		Req = cowboy_req:add_header('Accept', <<"application/xml, application/json">>, ?HTTP_REQ),
+		Req = cowboy_req:add_header(<<"accept">>, <<"application/xml, application/json">>, ?HTTP_REQ),
 		?assertEqual(
 			[{<<"application">>,<<"xml">>,1.0},{<<"application">>,<<"json">>,1.0}],
 			accepts(Req)).
