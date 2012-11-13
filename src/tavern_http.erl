@@ -49,8 +49,8 @@ init(_Transport, Req, [Handler]) ->
 	Fun = fun({Key, Val}, {Req, State}) ->
 		case erlang:function_exported(Handler, Key, 2) of
 			true  ->
-				{Val, Req2, State2} = Handler:Key(Req, State),
-				{Req2, SetRecord(Key, Val, State2)};
+				{NewVal, Req2, State2} = Handler:Key(Req, State),
+				{Req2, SetRecord(Key, NewVal, State2)};
 			false ->
 				{Req, SetRecord(Key, Val, State)}
 		end
