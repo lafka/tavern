@@ -14,10 +14,11 @@
 -type mime_charset()    :: {binary(), binary(), binary()}.
 -type returnstatus()    :: http_int_status() | atom().
 -type http_int_status() :: 100..599.
+-type return()          :: {returnstatus(), cowboy_http:req(), #tavern{}, tree()}.
 
 
 -export_type([mime/0, tree/0, mime_charset/0, request_method/0, returnstatus/0,
-	mime_options/0]).
+	mime_options/0, return/0]).
 
 -spec init(Transport :: module(), Req :: cowboy_http:req(), [module()]) -> {ok, cowboy_http:req(), #tavern{}}.
 init(_Transport, Req, [Handler]) ->
