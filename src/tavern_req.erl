@@ -30,7 +30,7 @@ accepts(Req) ->
 			_            -> {T1, T2, 1.0}
 		end
 	end, binary:split(sanitize_media_header(Val), [<<$,>>],[global])),
-	lists:sort(fun({_, _, P1}, {_, _, P2}) -> P1 =< P2 end, AcceptList).
+	lists:sort(fun({_, _, P1}, {_, _, P2}) -> P1 >= P2 end, AcceptList).
 
 -spec accept_charset(cowboy_http:req()) -> binary().
 accept_charset(Req) ->
