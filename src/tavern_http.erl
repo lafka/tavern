@@ -16,51 +16,59 @@
 -type http_int_status() :: 100..599.
 -type return()          :: {returnstatus(), cowboy_http:req(), #tavern{}, tree()}.
 
+-define(DEFAULT_HANDLER,
+	  {allowed_methods,  [<<"HEAD">>, <<"GET">>, <<"OPTIONS">>]}
+	, {method_handlers, [
+		  {<<"HEAD">>,    handle_head}
+		, {<<"GET">>,     handle_get}
+		, {<<"POST">>,    handle_post}
+		, {<<"PUT">>,     handle_put}
+		, {<<"DELETE">>,  handle_delete}
+		, {<<"PATCH">>,   handle_patch}
+		, {<<"OPTIONS">>, handle_default_options}
+	]}
+	, {content_types_provided, [
+		  {<<"text">>,       <<"html">>, []}
+		, {<<"application">>,<<"xml">>,  []}
+		, {<<"application">>,<<"json">>, []}
+	]}
+	, {content_types_accepted, [
+		  {<<"text">>,        <<"html">>, []}
+		, {<<"application">>, <<"xml">>,  []}
+		, {<<"application">>, <<"json">>, []}
+	]}
+).
 
 -export_type([mime/0, tree/0, mime_charset/0, request_method/0, returnstatus/0,
 	mime_options/0, return/0]).
 
 -spec init(Transport :: module(), Req :: cowboy_http:req(), [module()]) -> {ok, cowboy_http:req(), #tavern{}}.
 init(_Transport, Req, [Handler]) ->
-	Defaults = [
-		  {allowed_methods,  [<<"HEAD">>, <<"GET">>, <<"OPTIONS">>]}
-		, {method_handlers, [
-			  {<<"HEAD">>,    handle_head}
-			, {<<"GET">>,     handle_get}
-			, {<<"POST">>,    handle_post}
-			, {<<"PUT">>,     handle_put}
-			, {<<"DELETE">>,  handle_delete}
-			, {<<"PATCH">>,   handle_patch}
-			, {<<"OPTIONS">>, handle_default_options}
-		]}
-		, {content_types_provided, [
-			  {<<"text">>,       <<"html">>, []}
-			, {<<"application">>,<<"xml">>,  []}
-			, {<<"application">>,<<"json">>, []}
-		]}
-		, {content_types_accepted, [
-			  {<<"text">>,        <<"html">>, []}
-			, {<<"application">>, <<"xml">>,  []}
-			, {<<"application">>, <<"json">>, []}
-		]} ],
-	SetRecord = fun(allowed_methods, V, R)        -> R#tavern{allowed_methods  = V};
-	               (method_handlers, V, R)        -> R#tavern{method_handlers  = V};
-	               (content_types_provided, V, R) -> R#tavern{content_types_provided = V};
-	               (content_types_accepted, V, R) -> R#tavern{content_types_accepted = V} end,
+	Defaults = [?DEFAULT_HANDLER],
 	Fun = fun({Key, Val}, {Req, State}) ->
 		case erlang:function_exported(Handler, Key, 2) of
 			true  ->
 				{NewVal, Req2, State2} = Handler:Key(Req, State),
-				{Req2, SetRecord(Key, NewVal, State2)};
+				{Req2, tavern_lens(Key, NewVal, State2)};
 			false ->
-				{Req, SetRecord(Key, Val, State)}
+				{Req, tavern_lens(Key, Val, State)}
 		end
 	end,
 	{Req2, State} = lists:foldl( Fun, {Req, #tavern{}}, Defaults),
+	Req3 = cowboy_req:set_resp_header(<<"Allow">>
+		, lists:foldl(fun(A,<<>>) -> A; (A,B) -> <<A/binary, $,, B/binary>> end
+			, <<>>
+			, State#tavern.allowed_methods)
+		, Req2),
 	case erlang:function_exported(Handler, init, 2) of
-		true  -> Handler:init(Req, State#tavern{module = Handler});
-		false -> {ok, Req2, State#tavern{module = Handler}}
+		true  -> Handler:init(Req3, State#tavern{module = Handler});
+		false -> {ok, Req3, State#tavern{module = Handler}}
 	end.
+
+tavern_lens(allowed_methods, V, R)        -> R#tavern{allowed_methods  = V};
+tavern_lens(method_handlers, V, R)        -> R#tavern{method_handlers  = V};
+tavern_lens(content_types_provided, V, R) -> R#tavern{content_types_provided = V};
+tavern_lens(content_types_accepted, V, R) -> R#tavern{content_types_accepted = V}.
 
 -spec handle(Handler :: module(), cowboy_http:req(), #tavern{})-> {ok, cowboy_http:req(), #tavern{}}.
 handle(Module, Req, #tavern{} = State) ->
