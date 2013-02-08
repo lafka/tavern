@@ -72,27 +72,12 @@ tavern_lens(content_types_accepted, V, R) -> R#tavern{content_types_accepted = V
 
 -spec handle(Handler :: module(), cowboy_http:req(), #tavern{})-> {ok, cowboy_http:req(), #tavern{}}.
 handle(Module, Req, #tavern{} = State) ->
-	try
-		case tavern_req:validate_req(Req, State) of
-			{true, Req2, State2} ->
-				{Status, NewReq, NewState, Payload} = handle_call(Module, Req2, State2),
-				handle_resp(NewReq, NewState, Status, Payload);
-			%% tavern_req specified return status
-			{{Status, Payload}, NewReq, NewState} ->
-				handle_resp(NewReq, NewState, Status, Payload)
-		end
-	catch
-		Class:Reason ->
-			#tavern{module = Module} = State,
-			error_logger:error_msg(
-				"** Handler ~p terminating in tavern_http:handle/3~n"
-				"   for the reason: ~p:~p~n"
-				"** stacktrace:~n~p~n",
-				[Module, Class, Reason, erlang:get_stacktrace()]),
-			{ok, Resp2} = cowboy_req:reply(status('Internal Server Error'),
-				[], <<"(error #1000) unexpected error">>,
-				Req),
-			{ok, Resp2, State}
+	case tavern_req:validate_req(Req, State) of
+		{true, Req2, State2} ->
+			{Status, NewReq, NewState, Payload} = handle_call(Module, Req2, State2),
+			handle_resp(NewReq, NewState, Status, Payload);
+		{{Status, Payload}, NewReq, NewState} ->
+			handle_resp(NewReq, NewState, Status, Payload)
 	end.
 
 -spec terminate(Handler :: module(), cowboy_http:req(), #tavern{})-> ok.
@@ -115,13 +100,7 @@ handle_call(Module, Req, #tavern{method_handlers = Handlers} = State) ->
 			false -> erlang:error({no_export, Module, Handler})
 		end
 	catch Class:Reason ->
-		error_logger:error_msg(
-				"** Handler ~p terminating in tavern_http:handle_call/3~n"
-				"   for the reason ~p:~p~n** "
-				"** Request was ~p~n"
-				"** State: ~p~n"
-				"** Stacktrace: ~p~n~n",
-				[Module, Class, Reason,  Req, State, erlang:get_stacktrace()]),
+		error_logger:error_msg(eunit_lib:format_exception({Class,Reason,erlang:get_stacktrace()})),
 		{'Internal Server Error', Req, State, [{error, [
 			  {code,    1000}
 			, {message, <<"(error #1000) an unexpected error occured">>}
