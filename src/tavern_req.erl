@@ -102,7 +102,7 @@ exposed_method(Req, #tavern{allowed_methods = Methods} = State) ->
 -spec consumed_type(Req :: cowboy_http:req(), State :: #tavern{}) -> continue() | resp().
 consumed_type(Req, State) ->
 	case cowboy_req:has_body(Req) of
-		{true, Req}  ->
+		true  ->
 			#tavern{content_types_accepted = TypeList} = State,
 			{Mime1, Mime2, _} = content_type(Req),
 			Charset = content_type_charset(Req),
@@ -118,12 +118,12 @@ consumed_type(Req, State) ->
 					{true, Req, State#tavern{ content_type = {Mime1, Mime2}
 						              , charset      = Charset}, fun decode_body/2}
 			end;
-		{false, Req} -> {true, Req, State, success}
+		false -> {true, Req, State, success}
 	end.
 
 -spec decode_body(Req :: cowboy_http:req(), State :: #tavern{}) -> continue() | resp().
 decode_body(Req, #tavern{content_type = ContentType} = State) ->
-	{ok, Binary, Req2} = cowboy_req:body(1500, Req),
+	{ok, Binary, Req2} = cowboy_req:body(Req),
 	case tavern_marshal:decode(ContentType, Binary) of
 		{ok, Payload} ->
 			{true, Req2, State#tavern{body = Payload}, success};
