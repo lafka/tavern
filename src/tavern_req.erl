@@ -18,11 +18,14 @@
                     , Req        :: cowboy_http:req()
                     , State      :: #tavern{}
                     , NextAction :: function() | success}.
+-define(defaultmime, <<"application/json">>).
+-define(defaultcharset, <<"utf-8">>).
+-define(defaultlang, <<"en-GB">>).
 
 %% Public request data API
 -spec accepts(cowboy_http:req()) -> [{binary(), binary(), float()}].
 accepts(Req) ->
-	{Val, Req} = cowboy_req:header(<<"accept">>, Req, <<"text/plain">>),
+	{Val, Req} = cowboy_req:header(<<"Accept">>, Req, ?defaultmime),
 	AcceptList = lists:map(fun(Seg) ->
 		{T1, T2, P} = cowboy_http:content_type(Seg),
 		case lists:takewhile(fun({<<"q">>, _}) -> true; (_) -> false end, P) of
@@ -34,21 +37,21 @@ accepts(Req) ->
 
 -spec accept_charset(cowboy_http:req()) -> binary().
 accept_charset(Req) ->
-	{Val, Req} = cowboy_req:header(<<"accept-charset">>, Req, <<"utf-8">>),
+	{Val, Req} = cowboy_req:header(<<"accept-charset">>, Req, ?defaultcharset),
 	Val.
 
 -spec accept_language(cowboy_http:req()) -> binary().
 accept_language(Req) ->
-	{Val, Req} = cowboy_req:header(<<"accept-language">>, Req, <<"en-US">>),
+	{Val, Req} = cowboy_req:header(<<"accept-language">>, Req, ?defaultlang),
 	Val.
 -spec content_language(cowboy_http:req()) -> binary().
 content_language(Req) ->
-	{Val, Req} = cowboy_req:header(<<"content-language">>, Req, <<"en-US">>),
+	{Val, Req} = cowboy_req:header(<<"content-language">>, Req, ?defaultlang),
 	Val.
 
 -spec content_type(cowboy_http:req()) -> tavern_http:mime_options().
 content_type(Req) ->
-	{Val, Req} = cowboy_req:header(<<"content-type">>, Req),
+	{Val, Req} = cowboy_req:header(<<"content-type">>, Req, ?defaultmime),
 	cowboy_http:content_type(Val).
 
 -spec content_type_charset(cowboy_http:req()) -> binary().
