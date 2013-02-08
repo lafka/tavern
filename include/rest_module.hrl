@@ -17,4 +17,3 @@ terminate(_Reason, Req, State) ->
 -spec handle_default_options(_, #tavern{}) -> {Status :: atom(), _, #tavern{}, binary()}.
 handle_default_options(Req, #tavern{allowed_methods = Methods} = State) ->
 	{'No Content', Req2, State, <<>>}.
-
