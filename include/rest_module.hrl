@@ -15,5 +15,5 @@ terminate(_Reason, Req, State) ->
 	tavern_http:terminate(?MODULE, Req, State).
 
 -spec handle_default_options(_, #tavern{}) -> {Status :: atom(), _, #tavern{}, binary()}.
-handle_default_options(Req, #tavern{allowed_methods = Methods} = State) ->
+handle_default_options(Req, #tavern{} = State) ->
 	{'No Content', Req, State, <<>>}.
