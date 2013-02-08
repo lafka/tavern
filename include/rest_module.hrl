@@ -16,9 +16,5 @@ terminate(_Reason, Req, State) ->
 
 -spec handle_default_options(_, #tavern{}) -> {Status :: atom(), _, #tavern{}, binary()}.
 handle_default_options(Req, #tavern{allowed_methods = Methods} = State) ->
-	F = fun(X, <<>>) -> atom_to_binary(X, utf8);
-		(X, Acc) -> X2 = atom_to_binary(X, utf8),
-		<<Acc/binary, $,, X2/binary>> end,
-	{ok, Req2} = cowboy_req:set_resp_header('Allow', lists:foldl(F, <<>>, Methods), Req),
 	{'No Content', Req2, State, <<>>}.
 
