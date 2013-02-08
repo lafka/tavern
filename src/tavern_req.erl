@@ -76,9 +76,10 @@ client_acceptable(Req, #tavern{content_types_provided = AcceptTypes} = State) ->
 		[] ->
 			{Val, Req} = cowboy_req:header(<<"accept">>, Req, <<"missing valid \"Accept\" header">>),
 			{ {'Not Acceptable'
-			, [{error, [ {code, 405}
-			           , {message, <<"no supported accept types given">>}
-			           , {param,   Val}]}]}
+			, [{error, [
+				  {code, 405}
+				, {message, <<"no supported accept types given">>}
+				, {param,   Val}]}]}
 			, Req
 			, State#tavern{accept = {<<"text">>, <<"plain">>}}}
 	end.
@@ -95,9 +96,10 @@ exposed_method(Req, #tavern{allowed_methods = Methods} = State) ->
 			{true, Req, State, fun consumed_type/2};
 		_    ->
 			{ { 'Method Not Allowed'
-			, [{error, [ {code, 405}
-			           , {message, <<"unsupported HTTP method provided">>}
-			           , {param,   HTTPMethod}]}]}
+			, [{error, [
+				  {code, 405}
+				, {message, <<"unsupported HTTP method provided">>}
+				, {param,   HTTPMethod}]}]}
 			, Req
 			, State}
 	end.
@@ -112,14 +114,16 @@ consumed_type(Req, State) ->
 			case match_media_type({Mime1, Mime2}, TypeList) of
 				[] ->
 					{ {'Unsupported Media Type'
-					, [ {error, [ {code, 415}
-					            , {'message',      <<"content type not allowed">>}
-					            , {'param',        <<Mime1/binary, $/, Mime2/binary>>}]}]}
+					, [ {error, [
+						  {code, 415}
+						, {'message',      <<"content type not allowed">>}
+						, {'param',        <<Mime1/binary, $/, Mime2/binary>>}]}]}
 					, Req
 					, State};
 				_ ->
-					{true, Req, State#tavern{ content_type = {Mime1, Mime2}
-						              , charset      = Charset}, fun decode_body/2}
+					{true, Req, State#tavern{
+						  content_type = {Mime1, Mime2}
+						, charset      = Charset}, fun decode_body/2}
 			end;
 		false -> {true, Req, State, success}
 	end.
@@ -133,8 +137,9 @@ decode_body(Req, #tavern{content_type = ContentType} = State) ->
 		{error, Err} ->
 			ErrBin = atom_to_binary(Err, utf8),
 			{ {'Unsupported Media Type'
-			, [ {error, [ {code, 1003}
-			            , {'message',      <<"(error #1003) ", ErrBin/binary>>}]}]}
+			, [ {error, [
+				  {code, 1003}
+				, {'message',      <<"(error #1003) ", ErrBin/binary>>}]}]}
 			, Req2
 			, State}
 	end.
