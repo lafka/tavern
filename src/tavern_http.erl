@@ -45,13 +45,13 @@
 -spec init(Transport :: module(), Req :: cowboy_http:req(), [module()]) -> {ok, cowboy_http:req(), #tavern{}}.
 init(_Transport, Req, [Handler]) ->
 	Defaults = [?DEFAULT_HANDLER],
-	Fun = fun({Key, Val}, {Req, State}) ->
+	Fun = fun({Key, Val}, {InnerReq, State}) ->
 		case erlang:function_exported(Handler, Key, 2) of
 			true  ->
-				{NewVal, Req2, State2} = Handler:Key(Req, State),
-				{Req2, tavern_lens(Key, NewVal, State2)};
+				{NewVal, InnerReq2, State2} = Handler:Key(InnerReq, State),
+				{InnerReq2, tavern_lens(Key, NewVal, State2)};
 			false ->
-				{Req, tavern_lens(Key, Val, State)}
+				{InnerReq, tavern_lens(Key, Val, State)}
 		end
 	end,
 	{Req2, State} = lists:foldl( Fun, {Req, #tavern{}}, Defaults),
