@@ -74,8 +74,12 @@ tavern_lens(content_types_accepted, V, R) -> R#tavern{content_types_accepted = V
 handle(Module, Req, #tavern{} = State) ->
 	case tavern_req:validate_req(Req, State) of
 		{true, Req2, State2} ->
-			{Status, NewReq, NewState, Payload} = handle_call(Module, Req2, State2),
-			handle_resp(NewReq, NewState, Status, Payload);
+			case handle_call(Module, Req2, State2) of
+				{Status, NewReq, NewState, Payload} ->
+					handle_resp(NewReq, NewState, Status, Payload);
+				ok ->
+					{ok, Req2, State2}
+			end;
 		{{Status, Payload}, NewReq, NewState} ->
 			handle_resp(NewReq, NewState, Status, Payload)
 	end.
