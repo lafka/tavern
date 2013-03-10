@@ -25,7 +25,7 @@
 %% Public request data API
 -spec accepts(cowboy_http:req()) -> [{binary(), binary(), float()}].
 accepts(Req) ->
-	{Val, Req} = cowboy_req:header(<<"Accept">>, Req, ?defaultmime),
+	{Val, Req} = cowboy_req:header(<<"accept">>, Req, ?defaultmime),
 	AcceptList = lists:map(fun(Seg) ->
 		{T1, T2, P} = cowboy_http:content_type(Seg),
 		case lists:takewhile(fun({<<"q">>, _}) -> true; (_) -> false end, P) of
