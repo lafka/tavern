@@ -126,11 +126,18 @@ handle_resp(Req, #tavern{accept = {A, B, EncFun}} = State, Status, Payload) ->
 		{ok, EncodedPayload} = EncFun(Req, State, Payload),
 		{ok, Resp} = cowboy_req:reply(Status, [], EncodedPayload, Req),
 		{ok, Resp, State}
-	catch Class:Reason ->
-		{ok, ErrBody} = EncFun({A, B}, [{error, [
+	catch _Class:_Reason ->
+		ErrBody = case EncFun(Req, State, [{error, [
 			  {code, 1003}
 			, {message, <<"(error #1003) could not serialize content">>}
-		]}]),
+		]}]) of
+			{ok, Body} ->
+				Body;
+			{error, Err} ->
+				error_logger:warning_msg("could not serialize '~s/~s': ~p, ~p"
+					, [A, B, Err, Payload]),
+				<<>>
+			end,
 		{ok, ErrResp} = cowboy_req:reply(400, [], ErrBody, Req),
 		{ok, ErrResp, State}
 	end.
