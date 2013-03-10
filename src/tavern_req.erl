@@ -75,7 +75,6 @@ client_acceptable(Req, #tavern{content_types_provided = AcceptTypes} = State) ->
 			Opts = case [Z || {X, Y, Z} <- AcceptTypes, X == A, Y == B ] of
 				[] -> [];
 				[O] -> O end,
-			error_logger:info_msg("options(~p,~p): ~p", [A,B,Opts]),
 			Proxy = fun(InnerReq, InnerState, Payload) ->
 				case lists:keyfind(encode, 1, Opts) of
 					{encode, Fun} ->
