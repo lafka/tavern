@@ -122,9 +122,11 @@ handle_resp(Req, State, Status, Payload) when is_atom(Status) ->
 	handle_resp(Req, State, status(Status), Payload);
 
 handle_resp(Req, #tavern{accept = {A, B, EncFun}} = State, Status, Payload) ->
+	Req2 = cowboy_req:set_resp_header(<<"Content-Type">>
+		, <<A/binary, $/, B/binary>>, Req),
 	try
-		{ok, EncodedPayload} = EncFun(Req, State, Payload),
-		{ok, Resp} = cowboy_req:reply(Status, [], EncodedPayload, Req),
+		{ok, EncodedPayload} = EncFun(Req2, State, Payload),
+		{ok, Resp} = cowboy_req:reply(Status, [], EncodedPayload, Req2),
 		{ok, Resp, State}
 	catch _Class:_Reason ->
 		ErrBody = case EncFun(Req, State, [{error, [
