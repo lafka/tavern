@@ -19,6 +19,7 @@ encode(Mime, Payload) ->
 	Module:encode(Payload).
 
 -spec map_mime(Mime :: binary() | tavern_http:mime()) -> tavern_marshal_xml | tavern_marshal_json | tavern_marshal_html | tavern_marshal_plain.
+map_mime({A,B,_}) -> map_mime({A,B});
 map_mime({<<Mime1/binary>>, <<Mime2/binary>>}) -> map_mime(<<Mime1/binary, $/, Mime2/binary>>);
 map_mime(<<"application/xml">>)    -> tavern_marshal_xml;
 map_mime(<<"application/json">>)   -> tavern_marshal_json;
