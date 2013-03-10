@@ -70,9 +70,21 @@ authorized(Req, State) ->
 -spec client_acceptable(Req :: cowboy_http:req(), State:: #tavern{}) -> continue() | resp().
 client_acceptable(Req, #tavern{content_types_provided = AcceptTypes} = State) ->
 	AcceptFilter = fun(A) -> not ([] == match_media_type(A, AcceptTypes)) end,
-	case lists:filter(AcceptFilter, [{A, B} || {A, B, _} <- accepts(Req)]) of
-		[Type | _] ->
-			{true, Req, State#tavern{accept = Type}, fun exposed_method/2};
+	case lists:filter(AcceptFilter, accepts(Req)) of
+		[{A, B, _}| _] ->
+			Opts = case [Z || {X, Y, Z} <- AcceptTypes, X == A, Y == B ] of
+				[] -> [];
+				[O] -> O end,
+			error_logger:info_msg("options(~p,~p): ~p", [A,B,Opts]),
+			Proxy = fun(InnerReq, InnerState, Payload) ->
+				case lists:keyfind(encode, 1, Opts) of
+					{encode, Fun} ->
+						Fun(InnerReq, InnerState, Payload);
+					false ->
+						tavern_marshal:encode({A,B}, Payload)
+				end
+			end,
+			{true, Req, State#tavern{accept = {A, B, Proxy}}, fun exposed_method/2};
 		[] ->
 			{Val, Req} = cowboy_req:header(<<"accept">>, Req, <<"missing valid \"Accept\" header">>),
 			{ {'Not Acceptable'
@@ -121,17 +133,28 @@ consumed_type(Req, State) ->
 					, Req
 					, State};
 				_ ->
+					[Opts] = [Z || {X, Y, Z} <- TypeList,
+						X == Mime1, Y == Mime2 ],
+					DecFun = case lists:keyfind(decode, 1, Opts) of
+						{decode, Func} -> Func;
+						_ -> fun tavern_marshal:decode/2 end,
 					{true, Req, State#tavern{
-						  content_type = {Mime1, Mime2}
+						  content_type = {Mime1, Mime2, DecFun}
 						, charset      = Charset}, fun decode_body/2}
 			end;
 		false -> {true, Req, State, success}
 	end.
 
 -spec decode_body(Req :: cowboy_http:req(), State :: #tavern{}) -> continue() | resp().
-decode_body(Req, #tavern{content_type = ContentType} = State) ->
-	{ok, Binary, Req2} = cowboy_req:body(Req),
-	case tavern_marshal:decode(ContentType, Binary) of
+decode_body(Req, #tavern{content_type = {A, B, DecFun}} = State) ->
+	{ok, Buf, Req2} = cowboy_req:body(Req),
+	Proxy = case is_function(DecFun, 3) of
+		true  -> % Decode new alternative
+			fun() -> DecFun(Req, State, Buf) end;
+		false -> % Decode oldschool tavern format
+			fun() -> DecFun({A, B}, Buf) end
+	end,
+	case Proxy() of
 		{ok, Payload} ->
 			{true, Req2, State#tavern{body = Payload}, success};
 		{error, Err} ->

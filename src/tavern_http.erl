@@ -121,11 +121,19 @@ handle_resp(Req, State, _Status, []) ->
 handle_resp(Req, State, Status, Payload) when is_atom(Status) ->
 	handle_resp(Req, State, status(Status), Payload);
 
-handle_resp(Req, #tavern{accept = Accept} = State, Status, Payload) ->
-	{ok, EncodedPayload} = tavern_marshal:encode(Accept, Payload),
-	A = cowboy_req:reply(Status, [], EncodedPayload, Req),
-	{ok, Resp} = A,
-	{ok, Resp, State}.
+handle_resp(Req, #tavern{accept = {A, B, EncFun}} = State, Status, Payload) ->
+	try
+		{ok, EncodedPayload} = EncFun(Req, State, Payload),
+		{ok, Resp} = cowboy_req:reply(Status, [], EncodedPayload, Req),
+		{ok, Resp, State}
+	catch Class:Reason ->
+		{ok, ErrBody} = EncFun({A, B}, [{error, [
+			  {code, 1003}
+			, {message, <<"(error #1003) could not serialize content">>}
+		]}]),
+		{ok, ErrResp} = cowboy_req:reply(400, [], ErrBody, Req),
+		{ok, ErrResp, State}
+	end.
 
 -spec status(atom()) -> http_int_status().
 status('Continue') ->                        100;
