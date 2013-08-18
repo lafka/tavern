@@ -1,0 +1,4 @@
+[ "cowboy": {:git, "git://github.com/extend/cowboy.git", "9eaee45c090b9cb170554bc7e09d679bc0598716", [{:tag, "0.8.6"}]},
+  "elixir-json": {:git, "git://github.com/cblage/elixir-json.git", "a4a6cff65ceafefb63963cd11db14e433fc7c488", []},
+  "json": {:git, "git://github.com/cblage/elixir-json.git", "a4a6cff65ceafefb63963cd11db14e433fc7c488", []},
+  "ranch": {:git, "file:///home/olav/src/dist/ranch.git", "4f70a16bbe08e446e8fec248ca345d5f8e7df038", [{:ref, "0.8.4"}]} ]
