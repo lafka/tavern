@@ -18,7 +18,7 @@ defmodule Examples.ElixirHelloWorld do
                                   [port: port],
                                   [env: [dispatch: dispatch]])
 
-    {status, body} = TavernTest.do_req "GET", path, [], port
+    {status, _headers, body} = TavernTest.do_req "GET", path, [], port
 
     assert body == "Elixir wants to say hi!"
     assert status == 200

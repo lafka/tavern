@@ -15,41 +15,29 @@ defmodule Tavern.Marshaller do
     accumulate: true, persist: true
 
   @doc """
-    Encode `body` according to the `accept` header
+    Encode `body` using the first marshaller matched
   """
-  def encode(_body, [], _handler) do
-    {:error, :no_accept_header} end
-
-  def encode(body, accepts, handler) do
-    mods = Tavern.HTTP.match_mimes accepts, (marshallers handler)
-
-    case mods do
-      [{{_,_} = mime, marshaller} | _] ->
-        marshaller.encode body
-
-      [] ->
-        {:error, :no_valid_marshaller}
-    end
+  def encode(body, []) do
+    {:error, :no_valid_marshaller}
   end
+
+  def encode(body, [{_, marshaller} = x | _rest]) do
+    marshaller.encode body
+  end
+
 
   @doc """
-    Decode `buf` according to the `Content-Type` header
+    Decode `buf` using the first marshaller matched
   """
-  def decode(_buf, [], _handler) do {:error, :no_content_type_header} end
-
-  def decode(buf, content_type, handler) do
-    mods = Tavern.HTTP.match_mimes content_type, (marshallers handler)
-
-    case mods do
-      [{{_,_} = mime, marshaller} | _] ->
-        marshaller.decode buf
-
-      [] ->
-        {:error, :no_valid_marshaller}
-    end
+  def decode(buf, []) do
+    {:error, :no_valid_marshaller}
   end
 
-  defp marshallers(handler) do
+  def decode(buf, [{_, marshaller} | _req]) do
+    marshaller.decode buf
+  end
+
+  def marshallers(handler) do
     a = Keyword.get_values(handler.__info__(:attributes), :marshal)
     b = Keyword.get_values(        __info__(:attributes), :marshal)
 
@@ -82,7 +70,7 @@ defmodule Tavern.Marshaller do
 
   @marshal {{"text", "plain"}, __MODULE__.Raw}
   defmodule Raw do
-    def encode(body) do
+    def encode(body) when is_binary(body) do
       body
     end
     def encode(body) do

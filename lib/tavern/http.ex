@@ -4,29 +4,6 @@ defmodule Tavern.HTTP do
     HTTP helper functions functions
   """
 
-  @doc """
-    Sort list of mimes by their qvalue, then pick the first mime that
-    matches the handler lists
-  """
-  def match_mimes(match, marshallers) do
-#      [{{<<"plain">>,<<"text">>,[]},1000,[]}],[]
-    Enum.reduce match, [], fn({{a, b, _}, q, _}, acc) ->
-      case match_mime {a,b}, marshallers, [] do
-        [] -> acc
-        m -> acc ++ m
-      end
-    end
-  end
-
-  def match_mime(_m, [], acc) do acc end
-  def match_mime({a, b},     [{{a, b}, mod} | rest], acc) do match_mime({a, b},   rest, [{{a,b}, mod} | acc]) end
-  def match_mime({"*", b},   [{{a, b}, mod} | rest], acc) do match_mime({"*", b}, rest, [{{a,b}, mod} | acc]) end
-  def match_mime({a, "*"},   [{{a, b}, mod} | rest], acc) do match_mime({a, "*"}, rest, [{{a,b}, mod} | acc]) end
-  def match_mime({a, b},   [{{"*", b}, mod} | rest], acc) do match_mime({"*", b}, rest, [{{a,b}, mod} | acc]) end
-  def match_mime({a, b},   [{{a, "*"}, mod} | rest], acc) do match_mime({a, "*"}, rest, [{{a,b}, mod} | acc]) end
-  def match_mime({"*", "*"}, all, []) do {:ok, all} end
-  def match_mime({a, b}, [_ | rest], acc) do match_mime({a, b}, rest, acc) end
-
   def status("Continue") do                        100 end
   def status("Switching Protocols") do             101 end
   def status("Processing") do                      102 end

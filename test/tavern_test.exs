@@ -16,13 +16,13 @@ defmodule TavernTest do
   end
 
   def do_req(method, path, headers, port) do
-    url                      = "http://localhost:#{port}#{path}"
-    {:ok, client}            = Client.init []
-    {:ok, client}            = Client.request method, url, headers, client
-    {:ok, status, _, client} = Client.response client
-    {:ok, body, _client}     = Client.response_body client
+    url           = "http://localhost:#{port}#{path}"
+    {:ok, client} = Client.init []
+    {:ok, client} = Client.request method, url, headers, client
+    {:ok, status, headers, client} = Client.response client
+    {:ok, body, _client} = Client.response_body client
 
-    {status, body}
+    {status, headers, body}
   end
 
 end
