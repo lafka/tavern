@@ -45,7 +45,6 @@ defmodule Tavern.Invoker do
 
   def handle(req, state) do
     {method, req} = Req.method(req)
-    {url, req}    = Req.url(req)
 
     # map handle_get, handle_post, handle_put, handle_delete, etc
     fun = binary_to_atom "handle_#{String.downcase method}"
@@ -87,7 +86,7 @@ defmodule Tavern.Invoker do
   end
 
   defp maybe_decode_body(req, state) do
-    {:ok, body} = if Req.has_body req do
+    if Req.has_body req do
       {:ok, buf, req} = Req.body req
       Tavern.Marshaller.decode buf, Tavern.Handler.consumable(req, state.handler)
     else

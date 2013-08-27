@@ -64,13 +64,13 @@ defmodule Tavern.Handler do
   defp match_mime({a, b},     [{{a, b},   a2, mod} | rest], acc) do
     match_mime({a, b},   rest, [{{a2,b}, mod} | acc]) end
 
-  defp match_mime({"*", b},   [{{a, b},   a2, mod} | rest], acc) do
+  defp match_mime({"*", b},   [{{_a, b},   a2, mod} | rest], acc) do
     match_mime({"*", b}, rest, [{{a2,b}, mod} | acc]) end
 
   defp match_mime({a, "*"},   [{{a, b},   a2, mod} | rest], acc) do
     match_mime({a, "*"}, rest, [{{a2,b}, mod} | acc]) end
 
-  defp match_mime({a, b},     [{{"*", b}, a2, mod} | rest], acc) do
+  defp match_mime({_a, b},     [{{"*", b}, a2, mod} | rest], acc) do
     match_mime({"*", b}, rest, [{{a2,b}, mod} | acc]) end
 
   defp match_mime({a, b},     [{{a, "*"}, a2, mod} | rest], acc) do
