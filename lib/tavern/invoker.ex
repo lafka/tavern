@@ -23,9 +23,6 @@ defmodule Tavern.Invoker do
       consumes: consume = Tavern.Handler.consumable(req, handler),
       provides: accept  = Tavern.Handler.acceptable(req, handler)]
 
-    accept_header = lc {{a, b}, _} inlist accept do [a, "/", b] end
-    req = Req.set_resp_header "Accept", iolist_to_binary(accept_header), req
-
     has_content = Req.has_body req
 
     case req do
