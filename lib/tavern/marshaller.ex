@@ -17,25 +17,15 @@ defmodule Tavern.Marshaller do
   @doc """
     Encode `body` using the first marshaller matched
   """
-  def encode(body, []) do
-    {:error, :no_valid_marshaller}
-  end
-
-  def encode(body, [{_, marshaller} = x | _rest]) do
-    marshaller.encode body
-  end
+  def encode(_body, []), do: {:error, :no_valid_marshaller}
+  def encode(body, [{_, marshaller} | _rest]), do: marshaller.encode body
 
 
   @doc """
     Decode `buf` using the first marshaller matched
   """
-  def decode(buf, []) do
-    {:error, :no_valid_marshaller}
-  end
-
-  def decode(buf, [{_, marshaller} | _req]) do
-    marshaller.decode buf
-  end
+  def decode(_buf, []), do: {:error, :no_valid_marshaller}
+  def decode(buf, [{_, marshaller} | _req]), do: marshaller.decode buf
 
   def marshallers(handler) do
     a = Keyword.get_values(handler.__info__(:attributes), :marshal)
@@ -44,41 +34,27 @@ defmodule Tavern.Marshaller do
     lc [x] inlist a ++ b do x end
   end
 
-  @marshal {{"*", "json"}, JSON} # from JSON package
-
-  @marshal {{"*", "xml"}, __MODULE__.XML}
+  @marshal {{"*", "xml"}, "application", __MODULE__.XML}
   defmodule XML do
-    def encode(_body) do
-      ""
-    end
+    def encode(_body), do: ""
 
-    def decode(_buf) do
-      {:ok, []}
-    end
-  end
-
-  @marshal {{"*", "yaml"}, __MODULE__.YAML}
-  defmodule YAML do
-    def encode(_body) do
-      ""
-    end
-
-    def decode(_buf) do
-      {:ok, []}
-    end
+    def decode(_buf), do: {:ok, []}
   end
 
   @marshal {{"text", "plain"}, __MODULE__.Raw}
   defmodule Raw do
-    def encode(body) when is_binary(body) do
-      body
-    end
-    def encode(body) do
-      Kernel.inspect body
-    end
+    def encode(:ignore),                   do: ""
+    def encode(body) when is_binary(body), do: body
+    def encode(body),                      do: Kernel.inspect body
 
-    def decode(buf) do
-      buf
-    end
+    def decode(buf), do: buf
+  end
+
+  @marshal {{"*", "json"}, "application", __MODULE__.JSONProxy}
+  defmodule JSONProxy do
+    def encode(:ignore), do: ""
+    def encode(body), do: JSON.encode body
+
+    def decode(buf), do: JSON.decode buf
   end
 end
