@@ -11,9 +11,9 @@ defmodule Tavern.Handler do
 
   defmacro __using__(_opts // nil) do
     quote do
-      Module.register_attribute __MODULE__, :methods,  persist: true
-      Module.register_attribute __MODULE__, :accepts,  persist: true
-      Module.register_attribute __MODULE__, :provides, persist: true
+      Module.register_attribute __MODULE__, :methods, persist: true
+      Module.register_attribute __MODULE__, :consume, persist: true
+      Module.register_attribute __MODULE__, :provide, persist: true
     end
   end
 
