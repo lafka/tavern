@@ -64,11 +64,11 @@ defmodule Tavern.Invoker do
         req,
         state
     end
+
+    {:ok, req, state}
   end
 
-  def terminate(_reason, _req, _state) do
-    :ok
-  end
+  def terminate(_reason, _req, _state), do: :ok
 
   defp reply_unconsumable(req, state) do
     Tavern.Handler.reply "Unsupported Media Type",
