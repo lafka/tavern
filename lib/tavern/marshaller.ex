@@ -53,8 +53,12 @@ defmodule Tavern.Marshaller do
   @marshal {{"*", "json"}, "application", __MODULE__.JSONProxy}
   defmodule JSONProxy do
     def encode(:ignore), do: ""
-    def encode(body), do: JSON.encode body
+    def encode(body), do: :jsx.encode body
 
-    def decode(buf), do: JSON.decode buf
+    def decode(buf) do
+      try do
+        {:ok, :jsx.decode(buf)}
+      rescue ArgumentError -> false end
+    end
   end
 end

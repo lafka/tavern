@@ -14,6 +14,6 @@ defmodule Tavern.Mixfile do
 
   defp deps do
     [{:cowboy, github: "extend/cowboy", tag: "0.8.6"},
-     {:json,"0.1.0",[github: "cblage/elixir-json"]}]
+     {:jsx, github: "talentdeficit/jsx", tag: "v1.4.3"}]
   end
 end
