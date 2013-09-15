@@ -79,7 +79,8 @@ defmodule Tavern.Invoker do
       Tavern.Handler.error([
         error: "unsupported argument in 'Accept' header"]),
       req,
-      state
+      state,
+      accept: [{{"text", "plain"}, Tavern.Marshaller.Raw}]
   end
 
   defp maybe_decode_body(req, state) do

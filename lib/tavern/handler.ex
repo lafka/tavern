@@ -92,7 +92,11 @@ defmodule Tavern.Handler do
   end
 
   def reply(status, body, req, state, opts // []) do
-    [{{a, b}, _} | _] = accept = acceptable(req, state.handler)
+    [{{a, b}, _} | _] = accept = cond do
+      opts[:accept] != nil -> opts[:accept]
+      true -> acceptable(req, state.handler)
+    end
+
     buf = Tavern.Marshaller.encode body, accept
 
     req = Req.set_resp_header("Content-Type", "#{a}/#{b}", req)
