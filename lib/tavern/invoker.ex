@@ -18,7 +18,7 @@ defmodule Tavern.Invoker do
   @doc """
     Checks headers before handing control to `handle/2`
   """
-  def init(_transport, req, [handler]) do
+  def init(transport, req, [handler | opts]) do
     state = State.new [handler: handler,
       consumes: consume = Tavern.Handler.consumable(req, handler),
       provides: accept  = Tavern.Handler.acceptable(req, handler)]
@@ -35,7 +35,13 @@ defmodule Tavern.Invoker do
         {:shutdown, req, state}
 
       req ->
-        {:ok, req, state}
+        cond do
+          function_exported? handler, :init, 3 ->
+            handler.init transport, req, opts
+
+          true ->
+            {:ok, req, state}
+        end
     end
   end
 
@@ -50,8 +56,13 @@ defmodule Tavern.Invoker do
     {:ok, req} = if function_exported? state.handler, fun, 2 do
       {:ok, body} = maybe_decode_body req, state
 
-      {status, body, req} = apply state.handler, fun, [req, body]
-      Tavern.Handler.reply status, body, req, state
+      case apply state.handler, fun, [req, body] do
+        {status, body, req} ->
+          Tavern.Handler.reply status, body, req, state
+
+        {:noreply, req}  ->
+          {:ok, req}
+      end
     else
       Tavern.Handler.reply "Internal Server Error",
         Tavern.Handler.error([
