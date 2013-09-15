@@ -51,6 +51,7 @@ defmodule Tavern.Marshaller do
   end
 
   @marshal {{"*", "json"}, "application", __MODULE__.JSONProxy}
+  @marshal {{"text", "event-stream"}, __MODULE__.JSONProxy}
   defmodule JSONProxy do
     def encode(:ignore), do: ""
     def encode(body), do: :jsx.encode body
