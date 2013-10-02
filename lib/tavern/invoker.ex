@@ -54,15 +54,25 @@ defmodule Tavern.Invoker do
 
 
     {:ok, req} = if function_exported? state.handler, fun, 2 do
-      {:ok, body} = maybe_decode_body req, state
+      case maybe_decode_body req, state do
+        {:ok, body} ->
+          case apply state.handler, fun, [req, body] do
+            {status, body, req} ->
+              Tavern.Handler.reply status, body, req, state
 
-      case apply state.handler, fun, [req, body] do
-        {status, body, req} ->
-          Tavern.Handler.reply status, body, req, state
+            {:noreply, req}  ->
+              {:ok, req}
+          end
 
-        {:noreply, req}  ->
-          {:ok, req}
+        false ->
+          Tavern.Handler.reply "Bad Request",
+            Tavern.Handler.error([
+              error: "invalid content in request, could not derserialize",
+              code: 400]),
+           req,
+           state
       end
+
     else
       Tavern.Handler.reply "Internal Server Error",
         Tavern.Handler.error([
