@@ -41,19 +41,25 @@ defmodule Tavern.Middleware do
       as that code can be found in @link Tavern.Invoker
     """
 
-    def execute(req, env) do
+    @allowheaders "X-Requested-With,Origin,Content-Type,Accept,Cookie"
+    @allowmethods "GET, PUT, POST, DELETE, PATCH"
+
+    def execute(req, env, allow // []) do
       host = case Req.header "origin", req do
         {:undefined, req} -> "*"
         {host, req} -> host end
 
-      req = Req.set_resp_header "Access-Control-Allow-Origin", host, req
-      req = Req.set_resp_header "Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, PATCH", req
-      req = Req.set_resp_header "Access-Control-Allow-Headers", "X-Requested-With,Origin,Content-Type,Accept,Cookie", req
-      req = Req.set_resp_header "Access-Control-Allow-Credentials", "true", req
-      req = Req.set_resp_header "Access-Control-Max-Age", "1800", req
+      req = Req.set_resp_header "Access-Control-Allow-Origin", allow[:host] // host, req
+      req = Req.set_resp_header "Access-Control-Allow-Methods", allow[:methods] // @allowmethods, req
+      req = Req.set_resp_header "Access-Control-Allow-Headers", allow[:headers] // @allowheaders, req
+      req = Req.set_resp_header "Access-Control-Allow-Credentials", allow[:credentials] // "true", req
+      req = Req.set_resp_header "Access-Control-Max-Age", allow[:'max-age'] // "1800", req
 
       {:ok, req, env}
     end
+
+    defp nil // b, do: b
+    defp a // _b, do: a
   end
 end
 
