@@ -47,42 +47,51 @@ defmodule Tavern.Invoker do
 
 
   def handle(req, state) do
-    {method, req} = Req.method(req)
+    try do
+      {method, req} = Req.method(req)
 
-    # map handle_get, handle_post, handle_put, handle_delete, etc
-    fun = binary_to_atom "handle_#{String.downcase method}"
+      # map handle_get, handle_post, handle_put, handle_delete, etc
+      fun = binary_to_atom "handle_#{String.downcase method}"
 
 
-    {:ok, req} = if function_exported? state.handler, fun, 2 do
-      case maybe_decode_body req, state do
-        {:ok, body} ->
-          case apply state.handler, fun, [req, body] do
-            {status, body, req} ->
-              Tavern.Handler.reply status, body, req, state
+      {:ok, req} = if function_exported? state.handler, fun, 2 do
+        case maybe_decode_body req, state do
+          {:ok, body} ->
+            case apply state.handler, fun, [req, body] do
+              {status, body, req} ->
+                Tavern.Handler.reply status, body, req, state
 
-            {:noreply, req}  ->
-              {:ok, req}
-          end
+              {:noreply, req}  ->
+                {:ok, req}
+            end
 
-        false ->
-          Tavern.Handler.reply "Bad Request",
-            Tavern.Handler.error([
-              error: "invalid content in request, could not derserialize",
-              code: 400]),
-           req,
-           state
+          false ->
+            Tavern.Handler.reply "Bad Request",
+              Tavern.Handler.error([
+                error: "invalid content in request, could not derserialize",
+                code: 400]),
+             req,
+             state
+        end
+
+      else
+        Tavern.Handler.reply "Internal Server Error",
+          Tavern.Handler.error([
+            error: "no request handler defined",
+            code: 1002]),
+          req,
+          state
       end
 
-    else
-      Tavern.Handler.reply "Internal Server Error",
-        Tavern.Handler.error([
-          error: "no request handler defined",
-          code: 1002]),
-        req,
-        state
-    end
+      {:ok, req, state}
+    catch
+      error, kind ->
+        trace = :erlang.get_stacktrace
+        :error_logger.error_report :io_lib.format(
+          "Req crashed: ~p, ~p\r\nTrace:\r\n~p", [error, kind, trace])
 
-    {:ok, req, state}
+      {:ok, req, state}
+    end
   end
 
   def terminate(_reason, _req, _state), do: :ok
