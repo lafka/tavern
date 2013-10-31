@@ -2,6 +2,8 @@ defmodule Tavern.Invoker do
 
   require :cowboy_req,  as: Req
   require :cowboy_http, as: CowboyHttp
+  require Tavern.Handler, as: Handler
+  require Tavern.Marshaller, as: Marshaller
 
   @moduledoc """
     Provides cowboy -> handler proxy,
@@ -20,8 +22,8 @@ defmodule Tavern.Invoker do
   """
   def init(transport, req, [handler | opts]) do
     state = State.new [handler: handler,
-      consumes: consume = Tavern.Handler.consumable(req, handler),
-      provides: accept  = Tavern.Handler.acceptable(req, handler)]
+      consumes: consume = Handler.consumable(req, handler),
+      provides: accept  = Handler.acceptable(req, handler)]
 
     has_content = Req.has_body req
 
@@ -59,15 +61,15 @@ defmodule Tavern.Invoker do
           {:ok, body} ->
             case apply state.handler, fun, [req, body] do
               {status, body, req} ->
-                Tavern.Handler.reply status, body, req, state
+                Handler.reply status, body, req, state
 
               {:noreply, req}  ->
                 {:ok, req}
             end
 
           false ->
-            Tavern.Handler.reply "Bad Request",
-              Tavern.Handler.error([
+            Handler.reply "Bad Request",
+              Handler.error([
                 error: "invalid content in request, could not derserialize",
                 code: 400]),
              req,
@@ -75,8 +77,8 @@ defmodule Tavern.Invoker do
         end
 
       else
-        Tavern.Handler.reply "Internal Server Error",
-          Tavern.Handler.error([
+        Handler.reply "Internal Server Error",
+          Handler.error([
             error: "no request handler defined",
             code: 1002]),
           req,
@@ -97,26 +99,26 @@ defmodule Tavern.Invoker do
   def terminate(_reason, _req, _state), do: :ok
 
   defp reply_unconsumable(req, state) do
-    Tavern.Handler.reply "Unsupported Media Type",
-      Tavern.Handler.error([
+    Handler.reply "Unsupported Media Type",
+      Handler.error([
         error: "unsupported argument in 'Content-Type' header"]),
       req,
       state
   end
 
   defp reply_unacceptable(req, state) do
-    Tavern.Handler.reply "Not Acceptable",
-      Tavern.Handler.error([
+    Handler.reply "Not Acceptable",
+      Handler.error([
         error: "unsupported argument in 'Accept' header"]),
       req,
       state,
-      accept: [{{"text", "plain"}, Tavern.Marshaller.Raw}]
+      accept: [{{"text", "plain"}, Marshaller.Raw}]
   end
 
   defp maybe_decode_body(req, state) do
     if Req.has_body req do
       {:ok, buf, req} = Req.body req
-      Tavern.Marshaller.decode buf, Tavern.Handler.consumable(req, state.handler)
+      Marshaller.decode buf, Handler.consumable(req, state.handler)
     else
       {:ok, ""}
     end
