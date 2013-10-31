@@ -92,6 +92,12 @@ defmodule Tavern.Invoker do
         :error_logger.error_report :io_lib.format(
           "Req crashed: ~p, ~p\r\nTrace:\r\n~p", [error, kind, trace])
 
+        Handler.reply "Internal Server Error",
+          Handler.error([
+            error: "An unexpected error occured",
+            code: 500
+          ])
+
       {:ok, req, state}
     end
   end
