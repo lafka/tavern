@@ -4,7 +4,6 @@ defmodule Tavern.Mixfile do
   def project do
     [ app: :tavern,
       version: "0.2.0",
-      elixir: "~> 0.10.1",
       deps: deps ]
   end
 
@@ -13,7 +12,7 @@ defmodule Tavern.Mixfile do
   end
 
   defp deps do
-    [{:cowboy, github: "extend/cowboy", tag: "0.8.6"},
-     {:jsx, github: "talentdeficit/jsx", tag: "v1.4.3"}]
+    [{:cowboy, github: "extend/cowboy", tag: "0.9.0"},
+     {:jsx, github: "talentdeficit/jsx", tag: "v1.4.4"}]
   end
 end
