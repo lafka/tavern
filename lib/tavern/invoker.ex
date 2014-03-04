@@ -96,7 +96,9 @@ defmodule Tavern.Invoker do
           Handler.error([
             error: "An unexpected error occured",
             code: 500
-          ])
+          ]),
+          req,
+          state
 
       {:ok, req, state}
     end
