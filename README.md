@@ -1,5 +1,11 @@
 # Tavern is a RESTfull toolkit wrapped around cowboy
 
+## Deprecation
+
+This project is deprecated since it's no longer maintained or used. There are plenty of other solutions to this problem with much better libraries.
+
+## Main Goal
+
 The main goal is to provide easy handling of different content 
 types through common a common marshalling structure. There is 
 aslo a API that can be hooked onto to control what content-types
